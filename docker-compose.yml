@@ -1,0 +1,8 @@
+services:
+  meeting-transcriber:
+    image: ghcr.io/mpelaez/meeting-transcribe:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    restart: unless-stopped
