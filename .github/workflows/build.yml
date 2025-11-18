@@ -32,4 +32,4 @@ jobs:
             echo "Build failed: dist folder not found"
             exit 1
           fi
-          echo "✅ Build successful!"
+          echo "Build successful!"

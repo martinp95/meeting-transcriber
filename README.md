@@ -13,7 +13,7 @@ Una aplicación para subir archivos de audio o video de reuniones y obtener tran
 ```bash
 # 1. Clonar repositorio
 git clone https://github.com/mpelaez/meeting-transcriber.git
-cd meeting-transcribe
+cd meeting-transcriber
 
 # 2. Configurar API key
 cp .env.example .env
@@ -40,7 +40,7 @@ docker run -p 3000:3000 \
 ```bash
 # 1. Clonar
 git clone https://github.com/mpelaez/meeting-transcriber.git
-cd meeting-transcribe
+cd meeting-transcriber
 
 # 2. Instalar dependencias
 npm install
@@ -123,10 +123,9 @@ docker pull ghcr.io/mpelaez/meeting-transcribe:latest
 docker run -d -p 80:3000 -e GEMINI_API_KEY=tu_key ghcr.io/mpelaez/meeting-transcriber:latest
 ```
 
-## 📄 Licencia
-
-MIT
+## 📄 License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## 👨‍💻 Autor
 
-[@mpelaez](https://github.com/mpelaez)
+Maintained by [@martinp95](https://github.com/martinp95)

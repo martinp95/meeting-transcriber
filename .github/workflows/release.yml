@@ -26,9 +26,9 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            ## 🎉 Nueva versión de Meeting Transcriber AI
+            ## Nueva versión de Meeting Transcriber AI
             
-            ### 🐳 Docker Compose (Recomendado)
+            ### Docker Compose (Recomendado)
             ```bash
             # 1. Clonar el repositorio
             git clone https://github.com/${{ github.repository }}.git
@@ -42,7 +42,7 @@ jobs:
             docker-compose up
             ```
             
-            ### 🐳 Docker directo
+            ### Docker directo
             ```bash
             docker run -p 3000:3000 \
               -e GEMINI_API_KEY=tu_api_key \
@@ -57,10 +57,10 @@ jobs:
             npm run dev
             ```
             
-            ### 📝 Cambios en esta versión
-            - ✅ Imagen Docker pública en GitHub Container Registry
-            - ✅ Soporte para API key personalizada
-            - ✅ Docker Compose para fácil despliegue
+            ### Cambios en esta versión
+            - Imagen Docker pública en GitHub Container Registry
+            - Soporte para API key personalizada
+            - Docker Compose para fácil despliegue
           draft: false
           prerelease: false
 
@@ -107,5 +107,5 @@ jobs:
     steps:
       - name: Make Docker image public
         run: |
-          echo "📦 Imagen Docker publicada en: ghcr.io/${{ github.repository }}"
-          echo "✅ La imagen está disponible públicamente"
+          echo "Imagen Docker publicada en: ghcr.io/${{ github.repository }}"
+          echo "La imagen está disponible públicamente"
