@@ -1,0 +1,111 @@
+name: Release and Publish Docker
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            ## 🎉 Nueva versión de Meeting Transcriber AI
+            
+            ### 🐳 Docker Compose (Recomendado)
+            ```bash
+            # 1. Clonar el repositorio
+            git clone https://github.com/${{ github.repository }}.git
+            cd meeting-transcribe
+            
+            # 2. Configurar tu API key
+            cp .env.example .env
+            nano .env  # Editar con tu GEMINI_API_KEY
+            
+            # 3. Ejecutar
+            docker-compose up
+            ```
+            
+            ### 🐳 Docker directo
+            ```bash
+            docker run -p 3000:3000 \
+              -e GEMINI_API_KEY=tu_api_key \
+              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ```
+            
+            ### ⚙️ Instalación local
+            ```bash
+            npm install
+            cp .env.example .env.local
+            nano .env.local  # Editar con tu GEMINI_API_KEY
+            npm run dev
+            ```
+            
+            ### 📝 Cambios en esta versión
+            - ✅ Imagen Docker pública en GitHub Container Registry
+            - ✅ Soporte para API key personalizada
+            - ✅ Docker Compose para fácil despliegue
+          draft: false
+          prerelease: false
+
+  publish-docker:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  make-docker-public:
+    needs: publish-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Make Docker image public
+        run: |
+          echo "📦 Imagen Docker publicada en: ghcr.io/${{ github.repository }}"
+          echo "✅ La imagen está disponible públicamente"

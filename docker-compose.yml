@@ -1,6 +1,6 @@
 services:
   meeting-transcriber:
-    image: ghcr.io/mpelaez/meeting-transcribe:latest
+    image: ghcr.io/mpelaez/meeting-transcriber:latest
     ports:
       - "3000:3000"
     environment:
