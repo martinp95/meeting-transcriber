@@ -12,7 +12,7 @@ Una aplicación para subir archivos de audio o video de reuniones y obtener tran
 
 ```bash
 # 1. Clonar repositorio
-git clone https://github.com/mpelaez/meeting-transcriber.git
+git clone https://github.com/martinp95/meeting-transcriber.git
 cd meeting-transcriber
 
 # 2. Configurar API key
@@ -32,14 +32,14 @@ La aplicación estará disponible en `http://localhost:3000`
 # Ejecutar directamente (sin autenticación necesaria)
 docker run -p 3000:3000 \
   -e GEMINI_API_KEY=tu_api_key \
-  ghcr.io/mpelaez/meeting-transcriber:latest
+  ghcr.io/martinp95/meeting-transcriber:latest
 ```
 
 ### Opción 3: Instalación local
 
 ```bash
 # 1. Clonar
-git clone https://github.com/mpelaez/meeting-transcriber.git
+git clone https://github.com/martinp95/meeting-transcriber.git
 cd meeting-transcriber
 
 # 2. Instalar dependencias
@@ -113,14 +113,14 @@ docker-compose -f docker-compose.yml up -e 8000:3000
 ### Con Docker
 
 ```bash
-docker run -p 3000:3000 -e GEMINI_API_KEY=tu_key ghcr.io/mpelaez/meeting-transcriber:latest
+docker run -p 3000:3000 -e GEMINI_API_KEY=tu_key ghcr.io/martinp95/meeting-transcriber:latest
 ```
 
 ### En producción
 
 ```bash
-docker pull ghcr.io/mpelaez/meeting-transcribe:latest
-docker run -d -p 80:3000 -e GEMINI_API_KEY=tu_key ghcr.io/mpelaez/meeting-transcriber:latest
+docker pull ghcr.io/martinp95/meeting-transcribe:latest
+docker run -d -p 80:3000 -e GEMINI_API_KEY=tu_key ghcr.io/martinp95/meeting-transcriber:latest
 ```
 
 ## 📄 License
