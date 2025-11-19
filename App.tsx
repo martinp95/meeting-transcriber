@@ -1,5 +1,6 @@
 import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 // --- SVG Icon Components ---
 
@@ -136,7 +137,7 @@ export default function App() {
     const [showDownloadOptions, setShowDownloadOptions] = useState(false);
     
     // Configuration Options
-    const [includeDiarization, setIncludeDiarization] = useState(true);
+    const [includeDiarization, setIncludeDiarization] = useState(false);
     const [includeTimestamps, setIncludeTimestamps] = useState(false);
 
     const downloadRef = useRef<HTMLDivElement>(null);
@@ -243,7 +244,7 @@ export default function App() {
                 formatting = "Formato requerido: Texto plano dividido en párrafos lógicos.";
             }
 
-            const prompt = `${instructions}\n\n${formatting}${example}\n\nEl resultado debe ser limpio, en idioma original, y capturar todos los detalles de la conversación.`;
+            const prompt = `${instructions}\n\n${formatting}${example}\n\nEl resultado debe ser limpio, en el idioma original, y capturar todos los detalles de la conversación.`;
             
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-pro",
@@ -280,18 +281,83 @@ export default function App() {
         }
     };
 
-    const handleDownload = (format: 'txt' | 'md') => {
+    const handleDownload = async (format: 'txt' | 'md' | 'docx') => {
         if (!transcription) return;
 
-        const blob = new Blob([transcription], { type: format === 'txt' ? 'text/plain' : 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `transcription.${format}`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (format === 'docx') {
+            // Generate DOCX with formatting
+            const lines = transcription.split('\n');
+            const docChildren = lines.map(line => {
+                const regex = /^(\[\d{1,2}:\d{2}(?::\d{2})?\])?\s*(Hablante [A-Z0-9 ]+:|Speaker [A-Z0-9 ]+:)?\s*(.*)$/i;
+                const match = line.match(regex);
+
+                if (match) {
+                    const timestamp = match[1];
+                    const speakerLabel = match[2];
+                    const content = match[3];
+
+                    const runs = [];
+                    if (timestamp) {
+                        runs.push(new TextRun({ text: timestamp + " ", color: "64748B" })); // Slate-500
+                    }
+                    if (speakerLabel) {
+                        runs.push(new TextRun({ text: speakerLabel + " ", bold: true, color: "2DD4BF" })); // Teal-400 (Approx)
+                    }
+                    if (content) {
+                         runs.push(new TextRun({ text: content }));
+                    }
+                     // Fallback if regex matches but empty groups (newlines)
+                    if (runs.length === 0) {
+                         runs.push(new TextRun({ text: line }));
+                    }
+
+                    return new Paragraph({
+                        children: runs,
+                        spacing: { after: 200 }
+                    });
+                } else {
+                     // Plain paragraph for lines not matching the pattern
+                    return new Paragraph({
+                        children: [new TextRun(line)],
+                        spacing: { after: 200 }
+                    });
+                }
+            });
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: docChildren,
+                }],
+            });
+
+            try {
+                const blob = await Packer.toBlob(doc);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `transcription.docx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.error("Error generating docx", e);
+                setError("Error al generar el archivo DOCX.");
+            }
+
+        } else {
+            // Existing Text/MD logic
+            const blob = new Blob([transcription], { type: format === 'txt' ? 'text/plain' : 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transcription.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
         setShowDownloadOptions(false);
     };
     
@@ -419,6 +485,9 @@ export default function App() {
                                                     </button>
                                                     <button onClick={() => handleDownload('md')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
                                                         Como .md
+                                                    </button>
+                                                    <button onClick={() => handleDownload('docx')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+                                                        Como .docx
                                                     </button>
                                                 </div>
                                             )}
