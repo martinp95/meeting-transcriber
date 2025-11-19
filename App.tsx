@@ -11,6 +11,11 @@ interface HistoryItem {
     fullText: string;
 }
 
+interface TranscriptionOptions {
+    includeDiarization: boolean;
+    includeTimestamps: boolean;
+}
+
 // --- Translations ---
 
 const translations = {
@@ -227,7 +232,7 @@ const LoadingSpinner = () => (
     </svg>
 );
 
-// --- Helper Functions ---
+// --- Logic Helpers ---
 
 const fileToGenerativePart = async (file: File) => {
     const base64EncodedDataPromise = new Promise<string>((resolve) => {
@@ -238,6 +243,60 @@ const fileToGenerativePart = async (file: File) => {
     return {
         inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
     };
+};
+
+const constructTranscriptionPrompt = (t: any, options: TranscriptionOptions) => {
+    const { includeDiarization, includeTimestamps } = options;
+    let instructions = t.promptRole;
+    let formatting = "";
+    let example = "";
+
+    if (includeDiarization) {
+        instructions += " " + t.promptDiarization;
+    } else {
+        instructions += " " + t.promptNoDiarization;
+    }
+
+    if (includeTimestamps) {
+        instructions += " " + t.promptTimestamps;
+    } else {
+        instructions += " " + t.promptNoTimestamps;
+    }
+
+    // Generate Format Examples
+    if (includeDiarization && includeTimestamps) {
+        formatting = t.promptFormatLineDiarTime;
+        example = t.promptExampleDiarTime;
+    } else if (includeDiarization && !includeTimestamps) {
+        formatting = t.promptFormatLineDiar;
+        example = t.promptExampleDiar;
+    } else if (!includeDiarization && includeTimestamps) {
+        formatting = t.promptFormatLineTime;
+        example = t.promptExampleTime;
+    } else {
+        formatting = t.promptFormatPlain;
+    }
+
+    return `${instructions}\n\n${formatting}${example}\n\n${t.promptEnd}`;
+};
+
+const transcribeFileWithGemini = async (
+    file: File, 
+    prompt: string, 
+    onProgress: (percentage: number) => void
+): Promise<string> => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+
+    onProgress(25);
+    const mediaPart = await fileToGenerativePart(file);
+    onProgress(50);
+
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-pro",
+        contents: [prompt, mediaPart]
+    });
+
+    return response.text || "";
 };
 
 // --- Main App Component ---
@@ -363,7 +422,6 @@ export default function App() {
 
     const loadFromHistory = (item: HistoryItem) => {
         setTranscription(item.fullText);
-        // Optionally allow loading without a file present, or keep current file
         setShowHistory(false);
     };
 
@@ -457,52 +515,18 @@ export default function App() {
         setProgressMessage(t.progressPreparing);
 
         try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-            setProgress(25);
-            const mediaPart = await fileToGenerativePart(file);
-            setProgress(50);
-            setProgressMessage(t.progressAnalyzing);
-            
-            // Dynamic Prompt Construction based on user options and language
-            let instructions = t.promptRole;
-            let formatting = "";
-            let example = "";
-
-            if (includeDiarization) {
-                instructions += " " + t.promptDiarization;
-            } else {
-                instructions += " " + t.promptNoDiarization;
-            }
-
-            if (includeTimestamps) {
-                instructions += " " + t.promptTimestamps;
-            } else {
-                instructions += " " + t.promptNoTimestamps;
-            }
-
-            // Generate Format Examples
-            if (includeDiarization && includeTimestamps) {
-                formatting = t.promptFormatLineDiarTime;
-                example = t.promptExampleDiarTime;
-            } else if (includeDiarization && !includeTimestamps) {
-                formatting = t.promptFormatLineDiar;
-                example = t.promptExampleDiar;
-            } else if (!includeDiarization && includeTimestamps) {
-                formatting = t.promptFormatLineTime;
-                example = t.promptExampleTime;
-            } else {
-                formatting = t.promptFormatPlain;
-            }
-
-            const prompt = `${instructions}\n\n${formatting}${example}\n\n${t.promptEnd}`;
-            
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-pro",
-                contents: [prompt, mediaPart]
+            const prompt = constructTranscriptionPrompt(t, {
+                includeDiarization,
+                includeTimestamps
             });
 
-            const text = response.text;
+            setProgressMessage(t.progressAnalyzing);
+
+            const text = await transcribeFileWithGemini(file, prompt, (percentage) => {
+                setProgress(percentage);
+                if (percentage === 50) setProgressMessage(t.progressAnalyzing);
+            });
+
             if (text) {
                 setTranscription(text);
                 saveToHistory(text, file);
@@ -518,7 +542,7 @@ export default function App() {
         } finally {
             setIsLoading(false);
         }
-    }, [file, includeDiarization, includeTimestamps, t, history]); // Added history to deps to ensure update works
+    }, [file, includeDiarization, includeTimestamps, t, history]);
 
     const handleCopy = () => {
         if (transcription) {
