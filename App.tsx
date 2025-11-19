@@ -32,6 +32,9 @@ const translations = {
         downloadTxt: "Como .txt",
         downloadMd: "Como .md",
         downloadDocx: "Como .docx",
+        loadSample: "Cargar archivo de muestra (Apollo 11)",
+        loadingSample: "Descargando archivo de muestra...",
+        errorSample: "Error al descargar el archivo de muestra.",
         // Prompt Instructions
         promptRole: "Eres un transcriptor experto. Tu tarea es transcribir el siguiente archivo de reunión (audio o video) con alta fidelidad.",
         promptDiarization: "Identifica con precisión a cada hablante individual y asígnales una etiqueta única (ej: 'Hablante A', 'Hablante B').",
@@ -74,6 +77,9 @@ const translations = {
         downloadTxt: "As .txt",
         downloadMd: "As .md",
         downloadDocx: "As .docx",
+        loadSample: "Load sample file (Apollo 11)",
+        loadingSample: "Downloading sample file...",
+        errorSample: "Error downloading sample file.",
         // Prompt Instructions
         promptRole: "You are an expert transcriber. Your task is to transcribe the following meeting file (audio or video) with high fidelity.",
         promptDiarization: "Accurately identify each individual speaker and assign them a unique label (e.g., 'Speaker A', 'Speaker B').",
@@ -259,6 +265,33 @@ export default function App() {
             } else {
                 setError(t.errorInvalidFile);
             }
+        }
+    };
+
+    const handleUseSampleFile = async () => {
+        setIsLoading(true);
+        setError('');
+        setProgress(0);
+        setProgressMessage(t.loadingSample);
+
+        try {
+            const response = await fetch('https://storage.googleapis.com/generativeai-downloads/data/Apollo-11_Day-01-Highlights-10s.mp3', {
+                mode: 'cors',
+                credentials: 'omit'
+            });
+            if (!response.ok) throw new Error("Network response was not ok");
+            const blob = await response.blob();
+            const sampleFile = new File([blob], "Apollo-11_Day-01-Highlights.mp3", { type: "audio/mpeg" });
+            
+            setFile(sampleFile);
+            setError('');
+            setTranscription('');
+        } catch (error) {
+            console.error("Error loading sample:", error);
+            setError(t.errorSample);
+        } finally {
+            setIsLoading(false);
+            setProgressMessage('');
         }
     };
 
@@ -528,10 +561,23 @@ export default function App() {
                                     onClick={() => fileInputRef.current?.click()}
                                     className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-300 ${isDragging ? 'border-teal-400 bg-slate-700/50' : 'border-slate-600 hover:border-slate-500 hover:bg-slate-700/30'}`}
                                 >
-                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
                                         <UploadIcon className="w-10 h-10 mb-3 text-slate-400" />
                                         <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-teal-400">{t.dropzoneDefault}</span> {t.dropzoneOr}</p>
                                         <p className="text-xs text-slate-500">{t.dropzoneFormats}</p>
+                                        
+                                        <div className="mt-4 z-10">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleUseSampleFile();
+                                                }}
+                                                className="text-teal-400 hover:text-teal-300 text-sm underline font-medium transition-colors"
+                                            >
+                                                {t.loadSample}
+                                            </button>
+                                        </div>
                                     </div>
                                     <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*" onChange={(e) => handleFileChange(e.target.files)} />
                                 </div>
