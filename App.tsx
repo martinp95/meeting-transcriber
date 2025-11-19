@@ -2,6 +2,15 @@ import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'reac
 import { GoogleGenAI } from "@google/genai";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 
+// --- Types ---
+interface HistoryItem {
+    id: string;
+    fileName: string;
+    date: string;
+    preview: string;
+    fullText: string;
+}
+
 // --- Translations ---
 
 const translations = {
@@ -35,6 +44,12 @@ const translations = {
         loadSample: "Cargar archivo de muestra (Apollo 11)",
         loadingSample: "Descargando archivo de muestra...",
         errorSample: "Error al descargar el archivo de muestra.",
+        charCount: "Caracteres",
+        // History
+        historyTitle: "Historial",
+        historyEmpty: "No hay transcripciones recientes.",
+        historyClear: "Borrar todo",
+        historyLoad: "Cargar",
         // Prompt Instructions
         promptRole: "Eres un transcriptor experto. Tu tarea es transcribir el siguiente archivo de reunión (audio o video) con alta fidelidad.",
         promptDiarization: "Identifica con precisión a cada hablante individual y asígnales una etiqueta única (ej: 'Hablante A', 'Hablante B').",
@@ -80,6 +95,12 @@ const translations = {
         loadSample: "Load sample file (Apollo 11)",
         loadingSample: "Downloading sample file...",
         errorSample: "Error downloading sample file.",
+        charCount: "Characters",
+        // History
+        historyTitle: "History",
+        historyEmpty: "No recent transcriptions.",
+        historyClear: "Clear all",
+        historyLoad: "Load",
         // Prompt Instructions
         promptRole: "You are an expert transcriber. Your task is to transcribe the following meeting file (audio or video) with high fidelity.",
         promptDiarization: "Accurately identify each individual speaker and assign them a unique label (e.g., 'Speaker A', 'Speaker B').",
@@ -172,6 +193,33 @@ const GlobeIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+const SunIcon = ({ className }: { className?: string }) => (
+    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+);
+
+const MoonIcon = ({ className }: { className?: string }) => (
+    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+);
+
+const HistoryIcon = ({ className }: { className?: string }) => (
+    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+    </svg>
+);
+
 const LoadingSpinner = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -197,7 +245,7 @@ const fileToGenerativePart = async (file: File) => {
 const TranscriptionViewer = ({ text }: { text: string }) => {
     const lines = text.split('\n');
     return (
-        <div className="w-full h-full bg-slate-800 rounded-lg p-4 overflow-y-auto text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
+        <div className="w-full h-full bg-white dark:bg-slate-800 rounded-lg p-4 pb-12 overflow-y-auto text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
             {lines.map((line, index) => {
                 // Regex matches: Optional timestamp [00:00] + Optional Speaker Label + Content
                 // Groups: 1=Timestamp, 2=SpeakerLabel, 3=Content
@@ -216,8 +264,8 @@ const TranscriptionViewer = ({ text }: { text: string }) => {
 
                     return (
                         <p key={index} className="mb-2">
-                            {timestamp && <span className="text-slate-500 mr-2 select-none">{timestamp}</span>}
-                            {speakerLabel && <span className="font-bold text-teal-400 mr-1">{speakerLabel}</span>}
+                            {timestamp && <span className="text-slate-500 dark:text-slate-500 mr-2 select-none">{timestamp}</span>}
+                            {speakerLabel && <span className="font-bold text-teal-600 dark:text-teal-400 mr-1">{speakerLabel}</span>}
                             <span>{content}</span>
                         </p>
                     );
@@ -230,6 +278,7 @@ const TranscriptionViewer = ({ text }: { text: string }) => {
 
 export default function App() {
     const [language, setLanguage] = useState<'es' | 'en'>('es');
+    const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const t = translations[language];
 
     const [file, setFile] = useState<File | null>(null);
@@ -246,11 +295,76 @@ export default function App() {
     const [includeDiarization, setIncludeDiarization] = useState(false);
     const [includeTimestamps, setIncludeTimestamps] = useState(false);
 
+    // History State
+    const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [showHistory, setShowHistory] = useState(false);
+
     const downloadRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const historyRef = useRef<HTMLDivElement>(null);
+
+    // Load history from localStorage
+    useEffect(() => {
+        const savedHistory = localStorage.getItem('transcriptionHistory');
+        if (savedHistory) {
+            try {
+                setHistory(JSON.parse(savedHistory));
+            } catch (e) {
+                console.error("Error loading history", e);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }, [theme]);
 
     const toggleLanguage = () => {
         setLanguage(prev => prev === 'es' ? 'en' : 'es');
+    };
+
+    const toggleTheme = () => {
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    };
+
+    const toggleHistory = () => {
+        setShowHistory(prev => !prev);
+    };
+
+    const saveToHistory = (text: string, currentFile: File) => {
+        const newItem: HistoryItem = {
+            id: Date.now().toString(),
+            fileName: currentFile.name,
+            date: new Date().toLocaleString(),
+            preview: text.substring(0, 100) + "...",
+            fullText: text
+        };
+        
+        const updatedHistory = [newItem, ...history].slice(0, 10); // Keep last 10 items
+        setHistory(updatedHistory);
+        localStorage.setItem('transcriptionHistory', JSON.stringify(updatedHistory));
+    };
+
+    const removeFromHistory = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        const updatedHistory = history.filter(item => item.id !== id);
+        setHistory(updatedHistory);
+        localStorage.setItem('transcriptionHistory', JSON.stringify(updatedHistory));
+    };
+
+    const clearHistory = () => {
+        setHistory([]);
+        localStorage.removeItem('transcriptionHistory');
+    };
+
+    const loadFromHistory = (item: HistoryItem) => {
+        setTranscription(item.fullText);
+        // Optionally allow loading without a file present, or keep current file
+        setShowHistory(false);
     };
 
     const handleFileChange = (files: FileList | null) => {
@@ -389,7 +503,10 @@ export default function App() {
             });
 
             const text = response.text;
-            setTranscription(text);
+            if (text) {
+                setTranscription(text);
+                saveToHistory(text, file);
+            }
             setProgress(100);
             setProgressMessage(t.progressComplete);
 
@@ -401,7 +518,7 @@ export default function App() {
         } finally {
             setIsLoading(false);
         }
-    }, [file, includeDiarization, includeTimestamps, t]);
+    }, [file, includeDiarization, includeTimestamps, t, history]); // Added history to deps to ensure update works
 
     const handleCopy = () => {
         if (transcription) {
@@ -503,51 +620,118 @@ export default function App() {
             if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
                 setShowDownloadOptions(false);
             }
+            if (historyRef.current && !historyRef.current.contains(event.target as Node) && showHistory) {
+                setShowHistory(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
+    }, [showHistory]);
 
     // Custom Checkbox Component for consistent styling
     const ToggleOption = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) => (
         <div 
             onClick={() => onChange(!checked)} 
-            className="flex items-center justify-between p-3 bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-600 transition-colors border border-slate-600 hover:border-teal-500/50"
+            className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600 hover:border-teal-500/50"
         >
-            <span className="text-sm text-slate-200">{label}</span>
-            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${checked ? 'bg-teal-500 border-teal-500' : 'bg-transparent border-slate-400'}`}>
+            <span className="text-sm text-slate-700 dark:text-slate-200">{label}</span>
+            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${checked ? 'bg-teal-600 dark:bg-teal-500 border-teal-600 dark:border-teal-500' : 'bg-transparent border-slate-400'}`}>
                 {checked && <CheckIcon className="w-3.5 h-3.5 text-white" />}
             </div>
         </div>
     );
 
     return (
-        <div className="min-h-screen text-white flex flex-col items-center p-4 sm:p-6 md:p-8 relative">
+        <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 md:p-8 relative transition-colors duration-300 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-x-hidden">
             
-            {/* Language Toggle - Absolute positioned or in a header row */}
-            <div className="w-full max-w-4xl flex justify-end mb-2">
+            {/* Header Controls */}
+            <div className="w-full max-w-4xl flex justify-end mb-2 gap-2 relative z-30">
+                 <button 
+                    onClick={toggleHistory}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                    title={t.historyTitle}
+                >
+                    <HistoryIcon className="w-5 h-5" />
+                </button>
+                 <button 
+                    onClick={toggleTheme}
+                    className="flex items-center justify-center w-9 h-9 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                    title="Toggle Theme"
+                >
+                    {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+                </button>
                  <button 
                     onClick={toggleLanguage} 
-                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-600 transition-colors text-sm font-medium text-slate-300"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full border border-slate-200 dark:border-slate-600 transition-colors text-sm font-medium text-slate-600 dark:text-slate-300"
                     title="Switch Language / Cambiar Idioma"
                 >
-                    <GlobeIcon className="w-4 h-4 text-teal-400" />
-                    <span className={language === 'es' ? 'text-teal-400' : 'text-slate-400'}>ES</span>
-                    <span className="text-slate-600">|</span>
-                    <span className={language === 'en' ? 'text-teal-400' : 'text-slate-400'}>EN</span>
+                    <GlobeIcon className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <span className={language === 'es' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'}>ES</span>
+                    <span className="text-slate-300 dark:text-slate-600">|</span>
+                    <span className={language === 'en' ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'}>EN</span>
                 </button>
             </div>
 
-            <div className="w-full max-w-4xl mx-auto">
+            {/* History Drawer */}
+            <div 
+                ref={historyRef}
+                className={`fixed top-0 right-0 h-full w-80 bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200 dark:border-slate-700 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                    <h2 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                        <HistoryIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                        {t.historyTitle}
+                    </h2>
+                    <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                <div className="flex-grow overflow-y-auto p-4 space-y-3">
+                    {history.length === 0 ? (
+                        <p className="text-center text-slate-400 dark:text-slate-500 mt-8 italic">{t.historyEmpty}</p>
+                    ) : (
+                        history.map(item => (
+                            <div key={item.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 transition-colors group cursor-pointer" onClick={() => loadFromHistory(item)}>
+                                <div className="flex justify-between items-start mb-1">
+                                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate max-w-[180px]">{item.fileName}</span>
+                                    <button 
+                                        onClick={(e) => removeFromHistory(item.id, e)} 
+                                        className="text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
+                                        title="Delete"
+                                    >
+                                        <TrashIcon className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">{item.date}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 font-mono">{item.preview}</p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                {history.length > 0 && (
+                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                        <button onClick={clearHistory} className="w-full py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            {t.historyClear}
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* Overlay for drawer */}
+            {showHistory && (
+                <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-30 transition-opacity" onClick={() => setShowHistory(false)}></div>
+            )}
+
+            <div className="w-full max-w-4xl mx-auto z-10">
                 <header className="text-center mb-8">
-                    <h1 className="text-4xl sm:text-5xl font-bold text-slate-100">Meeting Transcriber <span className="text-teal-400">AI</span></h1>
-                    <p className="text-slate-400 mt-2 text-lg">{t.subtitle}</p>
+                    <h1 className="text-4xl sm:text-5xl font-bold text-slate-800 dark:text-slate-100">Meeting Transcriber <span className="text-teal-600 dark:text-teal-400">AI</span></h1>
+                    <p className="text-slate-500 dark:text-slate-400 mt-2 text-lg">{t.subtitle}</p>
                 </header>
 
-                <main className="bg-slate-800/50 p-6 rounded-2xl shadow-2xl border border-slate-700 backdrop-blur-sm">
+                <main className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl shadow-xl dark:shadow-2xl border border-slate-200 dark:border-slate-700 backdrop-blur-sm transition-colors duration-300">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                         {/* Left Column: File Upload and Controls */}
@@ -559,11 +743,11 @@ export default function App() {
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
                                     onClick={() => fileInputRef.current?.click()}
-                                    className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-300 ${isDragging ? 'border-teal-400 bg-slate-700/50' : 'border-slate-600 hover:border-slate-500 hover:bg-slate-700/30'}`}
+                                    className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-300 ${isDragging ? 'border-teal-500 bg-teal-50 dark:bg-slate-700/50' : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 bg-slate-50 dark:bg-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}
                                 >
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
                                         <UploadIcon className="w-10 h-10 mb-3 text-slate-400" />
-                                        <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-teal-400">{t.dropzoneDefault}</span> {t.dropzoneOr}</p>
+                                        <p className="mb-2 text-sm text-slate-600 dark:text-slate-400"><span className="font-semibold text-teal-600 dark:text-teal-400">{t.dropzoneDefault}</span> {t.dropzoneOr}</p>
                                         <p className="text-xs text-slate-500">{t.dropzoneFormats}</p>
                                         
                                         <div className="mt-4 z-10">
@@ -573,7 +757,7 @@ export default function App() {
                                                     e.stopPropagation();
                                                     handleUseSampleFile();
                                                 }}
-                                                className="text-teal-400 hover:text-teal-300 text-sm underline font-medium transition-colors"
+                                                className="text-teal-600 dark:text-teal-400 hover:text-teal-500 dark:hover:text-teal-300 text-sm underline font-medium transition-colors"
                                             >
                                                 {t.loadSample}
                                             </button>
@@ -582,16 +766,16 @@ export default function App() {
                                     <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*" onChange={(e) => handleFileChange(e.target.files)} />
                                 </div>
                             ) : (
-                                <div className="p-4 bg-slate-700 rounded-lg flex items-center justify-between border border-slate-600">
+                                <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-between border border-slate-200 dark:border-slate-600">
                                     <div className="flex items-center space-x-3 overflow-hidden">
                                         {file.type.startsWith('video/') ? (
-                                            <FileVideoIcon className="w-8 h-8 text-teal-400 flex-shrink-0" />
+                                            <FileVideoIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
                                         ) : (
-                                            <FileAudioIcon className="w-8 h-8 text-teal-400 flex-shrink-0" />
+                                            <FileAudioIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
                                         )}
-                                        <span className="text-sm font-medium truncate text-slate-200">{file.name}</span>
+                                        <span className="text-sm font-medium truncate text-slate-700 dark:text-slate-200">{file.name}</span>
                                     </div>
-                                    <button onClick={handleRemoveFile} title={t.removeFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-600 hover:text-white transition-colors flex-shrink-0">
+                                    <button onClick={handleRemoveFile} title={t.removeFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-white transition-colors flex-shrink-0">
                                         <TrashIcon className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -612,46 +796,46 @@ export default function App() {
                                 </div>
                             )}
 
-                            {error && <p className="text-sm text-red-400 text-center">{error}</p>}
+                            {error && <p className="text-sm text-red-500 dark:text-red-400 text-center">{error}</p>}
 
                             <button
                                 onClick={handleTranscribe}
                                 disabled={!file || isLoading}
-                                className="w-full flex items-center justify-center gap-2 bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg"
+                                className="w-full flex items-center justify-center gap-2 bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-500 disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg"
                             >
                                 {isLoading ? <LoadingSpinner /> : t.btnTranscribe}
                             </button>
                             
                             {(isLoading || progress > 0) && (
-                                <div className="w-full bg-slate-700 rounded-full h-2.5 overflow-hidden">
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden">
                                      <div className="bg-teal-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
-                                     <p className="text-center text-sm text-slate-400 mt-2 animate-pulse">{progressMessage}</p>
+                                     <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-2 animate-pulse">{progressMessage}</p>
                                 </div>
                             )}
                         </div>
 
                         {/* Right Column: Transcription Output */}
-                        <div className="relative h-[500px] flex flex-col bg-slate-900 rounded-lg border border-slate-700 overflow-hidden shadow-inner">
+                        <div className="relative h-[500px] flex flex-col bg-slate-50 dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-inner transition-colors">
                            {transcription ? (
                                 <>
                                     <div className="absolute top-2 right-2 flex items-center space-x-2 z-10">
-                                        {copySuccess && <span className="text-xs text-teal-400 font-semibold bg-slate-800 px-2 py-1 rounded transition-opacity duration-300">{copySuccess}</span>}
-                                        <button onClick={handleCopy} title="Copy to clipboard" className="p-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors shadow-sm">
+                                        {copySuccess && <span className="text-xs text-teal-600 dark:text-teal-400 font-semibold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded transition-opacity duration-300">{copySuccess}</span>}
+                                        <button onClick={handleCopy} title="Copy to clipboard" className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white transition-colors shadow-sm">
                                             <CopyIcon className="w-4 h-4" />
                                         </button>
                                          <div ref={downloadRef} className="relative">
-                                            <button onClick={() => setShowDownloadOptions(!showDownloadOptions)} title="Download transcription" className="p-2 rounded-lg bg-slate-800 border border-slate-600 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors shadow-sm">
+                                            <button onClick={() => setShowDownloadOptions(!showDownloadOptions)} title="Download transcription" className="p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-700 dark:hover:text-white transition-colors shadow-sm">
                                                 <DownloadIcon className="w-4 h-4" />
                                             </button>
                                             {showDownloadOptions && (
-                                                <div className="absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-600 rounded-md shadow-xl py-1 z-20">
-                                                    <button onClick={() => handleDownload('txt')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+                                                <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-md shadow-xl py-1 z-20">
+                                                    <button onClick={() => handleDownload('txt')} className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white">
                                                         {t.downloadTxt}
                                                     </button>
-                                                    <button onClick={() => handleDownload('md')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+                                                    <button onClick={() => handleDownload('md')} className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white">
                                                         {t.downloadMd}
                                                     </button>
-                                                    <button onClick={() => handleDownload('docx')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
+                                                    <button onClick={() => handleDownload('docx')} className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white">
                                                         {t.downloadDocx}
                                                     </button>
                                                 </div>
@@ -659,14 +843,19 @@ export default function App() {
                                         </div>
                                     </div>
                                     <TranscriptionViewer text={transcription} />
+                                    <div className="absolute bottom-3 right-6 pointer-events-none z-10">
+                                        <span className="bg-slate-100/80 dark:bg-slate-700/80 backdrop-blur-md text-slate-500 dark:text-slate-400 text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-600 font-mono shadow-sm">
+                                            {transcription.length.toLocaleString()} {t.charCount}
+                                        </span>
+                                    </div>
                                 </>
                             ) : (
-                                <div className="flex-grow flex flex-col items-center justify-center text-center text-slate-500 p-8 space-y-3">
-                                    <div className="p-4 bg-slate-800 rounded-full mb-2">
-                                        <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                                <div className="flex-grow flex flex-col items-center justify-center text-center text-slate-500 dark:text-slate-500 p-8 space-y-3">
+                                    <div className="p-4 bg-slate-200 dark:bg-slate-800 rounded-full mb-2">
+                                        <svg className="w-8 h-8 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                                     </div>
                                     <p className="font-medium text-slate-400">{t.placeholderReady}</p>
-                                    <p className="text-sm text-slate-600 max-w-xs">{t.placeholderDesc}</p>
+                                    <p className="text-sm text-slate-400 dark:text-slate-600 max-w-xs">{t.placeholderDesc}</p>
                                 </div>
                             )}
                         </div>
