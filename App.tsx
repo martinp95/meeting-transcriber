@@ -2,6 +2,95 @@ import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'reac
 import { GoogleGenAI } from "@google/genai";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 
+// --- Translations ---
+
+const translations = {
+    es: {
+        title: "Transcriptor de Reuniones",
+        subtitle: "Sube el audio o video de tu reunión y obtén una transcripción completa con IA.",
+        dropzoneDefault: "Haz clic para subir",
+        dropzoneDragging: "Suelta el archivo aquí",
+        dropzoneOr: "o arrastra y suelta",
+        dropzoneFormats: "Audio (MP3, WAV) o Video (MP4, MOV)",
+        fileSelected: "Archivo seleccionado",
+        removeFile: "Eliminar archivo",
+        optDiarization: "Identificar Hablantes",
+        optTimestamps: "Marcas de Tiempo",
+        errorSelectFile: "Por favor, selecciona un archivo primero.",
+        errorInvalidFile: "Por favor, sube un archivo de audio o video válido.",
+        errorGeneric: "Ocurrió un error durante la transcripción. Por favor, inténtalo de nuevo.",
+        btnTranscribe: "Transcribir Archivo",
+        btnTranscribing: "Transcribiendo...",
+        progressPreparing: "Preparando archivo...",
+        progressUploading: "Procesando medios...",
+        progressAnalyzing: "Analizando con Gemini AI...",
+        progressComplete: "¡Transcripción completa!",
+        placeholderReady: "Listo para transcribir",
+        placeholderDesc: "Sube un archivo y configura las opciones para ver el resultado aquí.",
+        copySuccess: "¡Copiado!",
+        copyError: "Error al copiar",
+        downloadTxt: "Como .txt",
+        downloadMd: "Como .md",
+        downloadDocx: "Como .docx",
+        // Prompt Instructions
+        promptRole: "Eres un transcriptor experto. Tu tarea es transcribir el siguiente archivo de reunión (audio o video) con alta fidelidad.",
+        promptDiarization: "Identifica con precisión a cada hablante individual y asígnales una etiqueta única (ej: 'Hablante A', 'Hablante B').",
+        promptNoDiarization: "No es necesario distinguir hablantes individuales, transcribe el texto de forma fluida.",
+        promptTimestamps: "Incluye marcas de tiempo precisas al inicio de cada intervención en formato [MM:SS].",
+        promptNoTimestamps: "No incluyas marcas de tiempo.",
+        promptFormatLineDiarTime: "Formato requerido por línea: [MM:SS] Hablante X: Contenido",
+        promptFormatLineDiar: "Formato requerido por línea: Hablante X: Contenido",
+        promptFormatLineTime: "Formato requerido por línea: [MM:SS] Contenido",
+        promptFormatPlain: "Formato requerido: Texto plano dividido en párrafos lógicos.",
+        promptExampleDiarTime: "\nEjemplo:\n[00:05] Hablante A: Hola a todos.\n[00:12] Hablante B: Buenos días.",
+        promptExampleDiar: "\nEjemplo:\nHablante A: Hola a todos.\nHablante B: Buenos días.",
+        promptExampleTime: "\nEjemplo:\n[00:05] Hola a todos.\n[00:12] Buenos días.",
+        promptEnd: "El resultado debe ser limpio, en el idioma original del audio, y capturar todos los detalles de la conversación."
+    },
+    en: {
+        title: "Meeting Transcriber",
+        subtitle: "Upload your meeting audio or video and get a full AI transcription.",
+        dropzoneDefault: "Click to upload",
+        dropzoneDragging: "Drop file here",
+        dropzoneOr: "or drag and drop",
+        dropzoneFormats: "Audio (MP3, WAV) or Video (MP4, MOV)",
+        fileSelected: "File selected",
+        removeFile: "Remove file",
+        optDiarization: "Identify Speakers",
+        optTimestamps: "Timestamps",
+        errorSelectFile: "Please select a file first.",
+        errorInvalidFile: "Please upload a valid audio or video file.",
+        errorGeneric: "An error occurred during transcription. Please try again.",
+        btnTranscribe: "Transcribe File",
+        btnTranscribing: "Transcribing...",
+        progressPreparing: "Preparing file...",
+        progressUploading: "Processing media...",
+        progressAnalyzing: "Analyzing with Gemini AI...",
+        progressComplete: "Transcription complete!",
+        placeholderReady: "Ready to transcribe",
+        placeholderDesc: "Upload a file and configure options to see the result here.",
+        copySuccess: "Copied!",
+        copyError: "Copy failed",
+        downloadTxt: "As .txt",
+        downloadMd: "As .md",
+        downloadDocx: "As .docx",
+        // Prompt Instructions
+        promptRole: "You are an expert transcriber. Your task is to transcribe the following meeting file (audio or video) with high fidelity.",
+        promptDiarization: "Accurately identify each individual speaker and assign them a unique label (e.g., 'Speaker A', 'Speaker B').",
+        promptNoDiarization: "No need to distinguish individual speakers, transcribe the text fluently.",
+        promptTimestamps: "Include accurate timestamps at the start of each intervention in [MM:SS] format.",
+        promptNoTimestamps: "Do not include timestamps.",
+        promptFormatLineDiarTime: "Required format per line: [MM:SS] Speaker X: Content",
+        promptFormatLineDiar: "Required format per line: Speaker X: Content",
+        promptFormatLineTime: "Required format per line: [MM:SS] Content",
+        promptFormatPlain: "Required format: Plain text divided into logical paragraphs.",
+        promptExampleDiarTime: "\nExample:\n[00:05] Speaker A: Hello everyone.\n[00:12] Speaker B: Good morning.",
+        promptExampleDiar: "\nExample:\nSpeaker A: Hello everyone.\nSpeaker B: Good morning.",
+        promptExampleTime: "\nExample:\n[00:05] Hello everyone.\n[00:12] Good morning.",
+        promptEnd: "The result must be clean, in the original language of the audio, and capture all details of the conversation."
+    }
+};
+
 // --- SVG Icon Components ---
 
 const UploadIcon = ({ className }: { className?: string }) => (
@@ -69,6 +158,14 @@ const CheckIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
+const GlobeIcon = ({ className }: { className?: string }) => (
+    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </svg>
+);
+
 const LoadingSpinner = () => (
     <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -126,6 +223,9 @@ const TranscriptionViewer = ({ text }: { text: string }) => {
 };
 
 export default function App() {
+    const [language, setLanguage] = useState<'es' | 'en'>('es');
+    const t = translations[language];
+
     const [file, setFile] = useState<File | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [transcription, setTranscription] = useState('');
@@ -143,6 +243,10 @@ export default function App() {
     const downloadRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const toggleLanguage = () => {
+        setLanguage(prev => prev === 'es' ? 'en' : 'es');
+    };
+
     const handleFileChange = (files: FileList | null) => {
         if (files && files[0]) {
             const selectedFile = files[0];
@@ -153,7 +257,7 @@ export default function App() {
                 setProgress(0);
                 setProgressMessage('');
             } else {
-                setError('Por favor, sube un archivo de audio o video válido.');
+                setError(t.errorInvalidFile);
             }
         }
     };
@@ -195,7 +299,7 @@ export default function App() {
 
     const handleTranscribe = useCallback(async () => {
         if (!file) {
-            setError('Por favor, selecciona un archivo primero.');
+            setError(t.errorSelectFile);
             return;
         }
 
@@ -203,7 +307,7 @@ export default function App() {
         setError('');
         setTranscription('');
         setProgress(0);
-        setProgressMessage('Preparando archivo...');
+        setProgressMessage(t.progressPreparing);
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
@@ -211,40 +315,40 @@ export default function App() {
             setProgress(25);
             const mediaPart = await fileToGenerativePart(file);
             setProgress(50);
-            setProgressMessage('Analizando con Gemini AI...');
+            setProgressMessage(t.progressAnalyzing);
             
-            // Dynamic Prompt Construction based on user options
-            let instructions = "Eres un transcriptor experto. Tu tarea es transcribir el siguiente archivo de reunión (audio o video) con alta fidelidad.";
+            // Dynamic Prompt Construction based on user options and language
+            let instructions = t.promptRole;
             let formatting = "";
             let example = "";
 
             if (includeDiarization) {
-                instructions += " Identifica con precisión a cada hablante individual y asígnales una etiqueta única (ej: 'Hablante A', 'Hablante B').";
+                instructions += " " + t.promptDiarization;
             } else {
-                instructions += " No es necesario distinguir hablantes individuales, transcribe el texto de forma fluida.";
+                instructions += " " + t.promptNoDiarization;
             }
 
             if (includeTimestamps) {
-                instructions += " Incluye marcas de tiempo precisas al inicio de cada intervención en formato [MM:SS].";
+                instructions += " " + t.promptTimestamps;
             } else {
-                instructions += " No incluyas marcas de tiempo.";
+                instructions += " " + t.promptNoTimestamps;
             }
 
             // Generate Format Examples
             if (includeDiarization && includeTimestamps) {
-                formatting = "Formato requerido por línea: [MM:SS] Hablante X: Contenido";
-                example = "\nEjemplo:\n[00:05] Hablante A: Hola a todos.\n[00:12] Hablante B: Buenos días, listos para empezar.";
+                formatting = t.promptFormatLineDiarTime;
+                example = t.promptExampleDiarTime;
             } else if (includeDiarization && !includeTimestamps) {
-                formatting = "Formato requerido por línea: Hablante X: Contenido";
-                example = "\nEjemplo:\nHablante A: Hola a todos.\nHablante B: Buenos días, listos para empezar.";
+                formatting = t.promptFormatLineDiar;
+                example = t.promptExampleDiar;
             } else if (!includeDiarization && includeTimestamps) {
-                formatting = "Formato requerido por línea: [MM:SS] Contenido";
-                example = "\nEjemplo:\n[00:05] Hola a todos.\n[00:12] Buenos días, listos para empezar.";
+                formatting = t.promptFormatLineTime;
+                example = t.promptExampleTime;
             } else {
-                formatting = "Formato requerido: Texto plano dividido en párrafos lógicos.";
+                formatting = t.promptFormatPlain;
             }
 
-            const prompt = `${instructions}\n\n${formatting}${example}\n\nEl resultado debe ser limpio, en el idioma original, y capturar todos los detalles de la conversación.`;
+            const prompt = `${instructions}\n\n${formatting}${example}\n\n${t.promptEnd}`;
             
             const response = await ai.models.generateContent({
                 model: "gemini-2.5-pro",
@@ -254,28 +358,28 @@ export default function App() {
             const text = response.text;
             setTranscription(text);
             setProgress(100);
-            setProgressMessage('¡Transcripción completa!');
+            setProgressMessage(t.progressComplete);
 
         } catch (err) {
             console.error(err);
-            setError('Ocurrió un error durante la transcripción. Por favor, inténtalo de nuevo.');
+            setError(t.errorGeneric);
             setProgress(0);
             setProgressMessage('');
         } finally {
             setIsLoading(false);
         }
-    }, [file, includeDiarization, includeTimestamps]);
+    }, [file, includeDiarization, includeTimestamps, t]);
 
     const handleCopy = () => {
         if (transcription) {
             navigator.clipboard.writeText(transcription)
                 .then(() => {
-                    setCopySuccess('¡Copiado!');
+                    setCopySuccess(t.copySuccess);
                     setTimeout(() => setCopySuccess(''), 2000);
                 })
                 .catch(err => {
                     console.error('Failed to copy: ', err);
-                    setCopySuccess('Error al copiar');
+                    setCopySuccess(t.copyError);
                     setTimeout(() => setCopySuccess(''), 2000);
                 });
         }
@@ -343,7 +447,7 @@ export default function App() {
                 URL.revokeObjectURL(url);
             } catch (e) {
                 console.error("Error generating docx", e);
-                setError("Error al generar el archivo DOCX.");
+                setError(t.errorGeneric);
             }
 
         } else {
@@ -388,11 +492,26 @@ export default function App() {
     );
 
     return (
-        <div className="min-h-screen text-white flex flex-col items-center p-4 sm:p-6 md:p-8">
+        <div className="min-h-screen text-white flex flex-col items-center p-4 sm:p-6 md:p-8 relative">
+            
+            {/* Language Toggle - Absolute positioned or in a header row */}
+            <div className="w-full max-w-4xl flex justify-end mb-2">
+                 <button 
+                    onClick={toggleLanguage} 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-full border border-slate-600 transition-colors text-sm font-medium text-slate-300"
+                    title="Switch Language / Cambiar Idioma"
+                >
+                    <GlobeIcon className="w-4 h-4 text-teal-400" />
+                    <span className={language === 'es' ? 'text-teal-400' : 'text-slate-400'}>ES</span>
+                    <span className="text-slate-600">|</span>
+                    <span className={language === 'en' ? 'text-teal-400' : 'text-slate-400'}>EN</span>
+                </button>
+            </div>
+
             <div className="w-full max-w-4xl mx-auto">
                 <header className="text-center mb-8">
                     <h1 className="text-4xl sm:text-5xl font-bold text-slate-100">Meeting Transcriber <span className="text-teal-400">AI</span></h1>
-                    <p className="text-slate-400 mt-2 text-lg">Sube el audio o video de tu reunión y obtén una transcripción completa con IA.</p>
+                    <p className="text-slate-400 mt-2 text-lg">{t.subtitle}</p>
                 </header>
 
                 <main className="bg-slate-800/50 p-6 rounded-2xl shadow-2xl border border-slate-700 backdrop-blur-sm">
@@ -411,8 +530,8 @@ export default function App() {
                                 >
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
                                         <UploadIcon className="w-10 h-10 mb-3 text-slate-400" />
-                                        <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-teal-400">Haz clic para subir</span> o arrastra y suelta</p>
-                                        <p className="text-xs text-slate-500">Audio (MP3, WAV) o Video (MP4, MOV)</p>
+                                        <p className="mb-2 text-sm text-slate-400"><span className="font-semibold text-teal-400">{t.dropzoneDefault}</span> {t.dropzoneOr}</p>
+                                        <p className="text-xs text-slate-500">{t.dropzoneFormats}</p>
                                     </div>
                                     <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*" onChange={(e) => handleFileChange(e.target.files)} />
                                 </div>
@@ -426,7 +545,7 @@ export default function App() {
                                         )}
                                         <span className="text-sm font-medium truncate text-slate-200">{file.name}</span>
                                     </div>
-                                    <button onClick={handleRemoveFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-600 hover:text-white transition-colors flex-shrink-0">
+                                    <button onClick={handleRemoveFile} title={t.removeFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-600 hover:text-white transition-colors flex-shrink-0">
                                         <TrashIcon className="w-5 h-5" />
                                     </button>
                                 </div>
@@ -435,12 +554,12 @@ export default function App() {
                             {file && !isLoading && (
                                 <div className="grid grid-cols-2 gap-3">
                                     <ToggleOption 
-                                        label="Identificar Hablantes" 
+                                        label={t.optDiarization}
                                         checked={includeDiarization} 
                                         onChange={setIncludeDiarization} 
                                     />
                                     <ToggleOption 
-                                        label="Marcas de Tiempo" 
+                                        label={t.optTimestamps}
                                         checked={includeTimestamps} 
                                         onChange={setIncludeTimestamps} 
                                     />
@@ -454,7 +573,7 @@ export default function App() {
                                 disabled={!file || isLoading}
                                 className="w-full flex items-center justify-center gap-2 bg-teal-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-teal-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg"
                             >
-                                {isLoading ? <LoadingSpinner /> : 'Transcribir Archivo'}
+                                {isLoading ? <LoadingSpinner /> : t.btnTranscribe}
                             </button>
                             
                             {(isLoading || progress > 0) && (
@@ -481,13 +600,13 @@ export default function App() {
                                             {showDownloadOptions && (
                                                 <div className="absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-600 rounded-md shadow-xl py-1 z-20">
                                                     <button onClick={() => handleDownload('txt')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
-                                                        Como .txt
+                                                        {t.downloadTxt}
                                                     </button>
                                                     <button onClick={() => handleDownload('md')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
-                                                        Como .md
+                                                        {t.downloadMd}
                                                     </button>
                                                     <button onClick={() => handleDownload('docx')} className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 hover:text-white">
-                                                        Como .docx
+                                                        {t.downloadDocx}
                                                     </button>
                                                 </div>
                                             )}
@@ -500,8 +619,8 @@ export default function App() {
                                     <div className="p-4 bg-slate-800 rounded-full mb-2">
                                         <svg className="w-8 h-8 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                                     </div>
-                                    <p className="font-medium text-slate-400">Listo para transcribir</p>
-                                    <p className="text-sm text-slate-600 max-w-xs">Sube un archivo y configura las opciones para ver el resultado aquí.</p>
+                                    <p className="font-medium text-slate-400">{t.placeholderReady}</p>
+                                    <p className="text-sm text-slate-600 max-w-xs">{t.placeholderDesc}</p>
                                 </div>
                             )}
                         </div>
