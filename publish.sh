@@ -39,12 +39,12 @@ fi
 # Git
 echo "Pushing changes to GitHub..."
 git add -A
-git commit -m "chore: release v$VERSION" || echo "ℹNo changes to commit"
+git commit -m "chore: release v$VERSION" || echo "No changes to commit"
 git push origin main
 
 # Tag and release
 echo "Creating tag v$VERSION..."
-git tag -a "v$VERSION" -m "Release version $VERSION" || echo "ℹTag already exists"
+git tag -a "v$VERSION" -m "Release version $VERSION" || echo "Tag already exists"
 git push origin main --tags
 
 echo ""
