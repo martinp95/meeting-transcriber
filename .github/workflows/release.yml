@@ -23,9 +23,6 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Generate package-lock
-        run: npm install --package-lock-only
-
       - name: Install dependencies
         run: npm ci
 
