@@ -96,11 +96,13 @@ GEMINI_API_KEY=your_gemini_api_key
 docker-compose -f docker-compose.yml up -p 8000:3000
 ```
 
-## License
-
-This project is licensed under the MIT License.  
-See the LICENSE file for details.
+---
 
 ## Author
+Maintained by [@martinp95](https://github.com/martinp95)
 
-Maintained by @martinp95 (https://github.com/martinp95)
+---
+
+## License
+
+Licensed under the [MIT License](LICENSE).
