@@ -31,7 +31,7 @@ docker-compose up
 ```bash
 docker run -p 3000:3000 \
   -e GEMINI_API_KEY=your_api_key \
-  ghcr.io/martinp95/meeting-transcriber:v0.1.0
+  ghcr.io/martinp95/meeting-transcriber:v1.0.0
 ```
 
 ---
