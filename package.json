@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "clean": "rm -rf dist dist-ssr node_modules .vite package-lock.json"
+    "clean": "rm -rf dist dist-ssr node_modules .vite"
   },
   "dependencies": {
     "react": "^19.2.0",
