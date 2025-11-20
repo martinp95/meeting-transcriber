@@ -1,339 +1,16 @@
 import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'react';
-import { GoogleGenAI } from "@google/genai";
-import { Document, Packer, Paragraph, TextRun } from "docx";
 
-// --- Types ---
-interface HistoryItem {
-    id: string;
-    fileName: string;
-    date: string;
-    preview: string;
-    fullText: string;
-}
+// Components
+import { UploadIcon, FileAudioIcon, FileVideoIcon, TrashIcon, CopyIcon, DownloadIcon, GlobeIcon, SunIcon, MoonIcon, HistoryIcon, LoadingSpinner } from './components/Icons';
+import TranscriptionViewer from './components/TranscriptionViewer';
+import ToggleOption from './components/ToggleOption';
+import HistoryDrawer from './components/HistoryDrawer';
 
-interface TranscriptionOptions {
-    includeDiarization: boolean;
-    includeTimestamps: boolean;
-}
-
-// --- Translations ---
-
-const translations = {
-    es: {
-        title: "Transcriptor de Reuniones",
-        subtitle: "Sube el audio o video de tu reunión y obtén una transcripción completa con IA.",
-        dropzoneDefault: "Haz clic para subir",
-        dropzoneDragging: "Suelta el archivo aquí",
-        dropzoneOr: "o arrastra y suelta",
-        dropzoneFormats: "Audio (MP3, WAV) o Video (MP4, MOV)",
-        fileSelected: "Archivo seleccionado",
-        removeFile: "Eliminar archivo",
-        optDiarization: "Identificar Hablantes",
-        optTimestamps: "Marcas de Tiempo",
-        errorSelectFile: "Por favor, selecciona un archivo primero.",
-        errorInvalidFile: "Por favor, sube un archivo de audio o video válido.",
-        errorGeneric: "Ocurrió un error durante la transcripción. Por favor, inténtalo de nuevo.",
-        btnTranscribe: "Transcribir Archivo",
-        btnTranscribing: "Transcribiendo...",
-        progressPreparing: "Preparando archivo...",
-        progressUploading: "Procesando medios...",
-        progressAnalyzing: "Analizando con Gemini AI...",
-        progressComplete: "¡Transcripción completa!",
-        placeholderReady: "Listo para transcribir",
-        placeholderDesc: "Sube un archivo y configura las opciones para ver el resultado aquí.",
-        copySuccess: "¡Copiado!",
-        copyError: "Error al copiar",
-        downloadTxt: "Como .txt",
-        downloadMd: "Como .md",
-        downloadDocx: "Como .docx",
-        loadSample: "Cargar archivo de muestra (Apollo 11)",
-        loadingSample: "Descargando archivo de muestra...",
-        errorSample: "Error al descargar el archivo de muestra.",
-        charCount: "Caracteres",
-        // History
-        historyTitle: "Historial",
-        historyEmpty: "No hay transcripciones recientes.",
-        historyClear: "Borrar todo",
-        historyLoad: "Cargar",
-        // Prompt Instructions
-        promptRole: "Eres un transcriptor experto. Tu tarea es transcribir el siguiente archivo de reunión (audio o video) con alta fidelidad.",
-        promptDiarization: "Identifica con precisión a cada hablante individual y asígnales una etiqueta única (ej: 'Hablante A', 'Hablante B').",
-        promptNoDiarization: "No es necesario distinguir hablantes individuales, transcribe el texto de forma fluida.",
-        promptTimestamps: "Incluye marcas de tiempo precisas al inicio de cada intervención en formato [MM:SS].",
-        promptNoTimestamps: "No incluyas marcas de tiempo.",
-        promptFormatLineDiarTime: "Formato requerido por línea: [MM:SS] Hablante X: Contenido",
-        promptFormatLineDiar: "Formato requerido por línea: Hablante X: Contenido",
-        promptFormatLineTime: "Formato requerido por línea: [MM:SS] Contenido",
-        promptFormatPlain: "Formato requerido: Texto plano dividido en párrafos lógicos.",
-        promptExampleDiarTime: "\nEjemplo:\n[00:05] Hablante A: Hola a todos.\n[00:12] Hablante B: Buenos días.",
-        promptExampleDiar: "\nEjemplo:\nHablante A: Hola a todos.\nHablante B: Buenos días.",
-        promptExampleTime: "\nEjemplo:\n[00:05] Hola a todos.\n[00:12] Buenos días.",
-        promptEnd: "El resultado debe ser limpio, en el idioma original del audio, y capturar todos los detalles de la conversación."
-    },
-    en: {
-        title: "Meeting Transcriber",
-        subtitle: "Upload your meeting audio or video and get a full AI transcription.",
-        dropzoneDefault: "Click to upload",
-        dropzoneDragging: "Drop file here",
-        dropzoneOr: "or drag and drop",
-        dropzoneFormats: "Audio (MP3, WAV) or Video (MP4, MOV)",
-        fileSelected: "File selected",
-        removeFile: "Remove file",
-        optDiarization: "Identify Speakers",
-        optTimestamps: "Timestamps",
-        errorSelectFile: "Please select a file first.",
-        errorInvalidFile: "Please upload a valid audio or video file.",
-        errorGeneric: "An error occurred during transcription. Please try again.",
-        btnTranscribe: "Transcribe File",
-        btnTranscribing: "Transcribing...",
-        progressPreparing: "Preparing file...",
-        progressUploading: "Processing media...",
-        progressAnalyzing: "Analyzing with Gemini AI...",
-        progressComplete: "Transcription complete!",
-        placeholderReady: "Ready to transcribe",
-        placeholderDesc: "Upload a file and configure options to see the result here.",
-        copySuccess: "Copied!",
-        copyError: "Copy failed",
-        downloadTxt: "As .txt",
-        downloadMd: "As .md",
-        downloadDocx: "As .docx",
-        loadSample: "Load sample file (Apollo 11)",
-        loadingSample: "Downloading sample file...",
-        errorSample: "Error downloading sample file.",
-        charCount: "Characters",
-        // History
-        historyTitle: "History",
-        historyEmpty: "No recent transcriptions.",
-        historyClear: "Clear all",
-        historyLoad: "Load",
-        // Prompt Instructions
-        promptRole: "You are an expert transcriber. Your task is to transcribe the following meeting file (audio or video) with high fidelity.",
-        promptDiarization: "Accurately identify each individual speaker and assign them a unique label (e.g., 'Speaker A', 'Speaker B').",
-        promptNoDiarization: "No need to distinguish individual speakers, transcribe the text fluently.",
-        promptTimestamps: "Include accurate timestamps at the start of each intervention in [MM:SS] format.",
-        promptNoTimestamps: "Do not include timestamps.",
-        promptFormatLineDiarTime: "Required format per line: [MM:SS] Speaker X: Content",
-        promptFormatLineDiar: "Required format per line: Speaker X: Content",
-        promptFormatLineTime: "Required format per line: [MM:SS] Content",
-        promptFormatPlain: "Required format: Plain text divided into logical paragraphs.",
-        promptExampleDiarTime: "\nExample:\n[00:05] Speaker A: Hello everyone.\n[00:12] Speaker B: Good morning.",
-        promptExampleDiar: "\nExample:\nSpeaker A: Hello everyone.\nSpeaker B: Good morning.",
-        promptExampleTime: "\nExample:\n[00:05] Hello everyone.\n[00:12] Good morning.",
-        promptEnd: "The result must be clean, in the original language of the audio, and capture all details of the conversation."
-    }
-};
-
-// --- SVG Icon Components ---
-
-const UploadIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="17 8 12 3 7 8"></polyline>
-        <line x1="12" y1="3" x2="12" y2="15"></line>
-    </svg>
-);
-
-const FileAudioIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-        <polyline points="14 2 14 8 20 8"></polyline>
-        <line x1="8" y1="15" x2="16" y2="15"></line>
-        <line x1="8" y1="19" x2="16" y2="19"></line>
-    </svg>
-);
-
-const FileVideoIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-        <line x1="7" y1="2" x2="7" y2="22"></line>
-        <line x1="17" y1="2" x2="17" y2="22"></line>
-        <line x1="2" y1="12" x2="22" y2="12"></line>
-        <line x1="2" y1="7" x2="7" y2="7"></line>
-        <line x1="2" y1="17" x2="7" y2="17"></line>
-        <line x1="17" y1="17" x2="22" y2="17"></line>
-        <line x1="17" y1="7" x2="22" y2="7"></line>
-    </svg>
-);
-
-const TrashIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <polyline points="3 6 5 6 21 6"></polyline>
-        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        <line x1="10" y1="11" x2="10" y2="17"></line>
-        <line x1="14" y1="11" x2="14" y2="17"></line>
-    </svg>
-);
-
-const CopyIcon = ({ className }: { className?: string }) => (
-  <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-  </svg>
-);
-
-const DownloadIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-    </svg>
-);
-
-const CheckIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="3" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <polyline points="20 6 9 17 4 12"></polyline>
-    </svg>
-);
-
-const GlobeIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10"></circle>
-        <line x1="2" y1="12" x2="22" y2="12"></line>
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-    </svg>
-);
-
-const SunIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="5"></circle>
-        <line x1="12" y1="1" x2="12" y2="3"></line>
-        <line x1="12" y1="21" x2="12" y2="23"></line>
-        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-        <line x1="1" y1="12" x2="3" y2="12"></line>
-        <line x1="21" y1="12" x2="23" y2="12"></line>
-        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-    </svg>
-);
-
-const MoonIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-    </svg>
-);
-
-const HistoryIcon = ({ className }: { className?: string }) => (
-    <svg className={className} stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-    </svg>
-);
-
-const LoadingSpinner = () => (
-    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-    </svg>
-);
-
-// --- Logic Helpers ---
-
-const fileToGenerativePart = async (file: File) => {
-    const base64EncodedDataPromise = new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
-        reader.readAsDataURL(file);
-    });
-    return {
-        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
-    };
-};
-
-const constructTranscriptionPrompt = (t: any, options: TranscriptionOptions) => {
-    const { includeDiarization, includeTimestamps } = options;
-    let instructions = t.promptRole;
-    let formatting = "";
-    let example = "";
-
-    if (includeDiarization) {
-        instructions += " " + t.promptDiarization;
-    } else {
-        instructions += " " + t.promptNoDiarization;
-    }
-
-    if (includeTimestamps) {
-        instructions += " " + t.promptTimestamps;
-    } else {
-        instructions += " " + t.promptNoTimestamps;
-    }
-
-    // Generate Format Examples
-    if (includeDiarization && includeTimestamps) {
-        formatting = t.promptFormatLineDiarTime;
-        example = t.promptExampleDiarTime;
-    } else if (includeDiarization && !includeTimestamps) {
-        formatting = t.promptFormatLineDiar;
-        example = t.promptExampleDiar;
-    } else if (!includeDiarization && includeTimestamps) {
-        formatting = t.promptFormatLineTime;
-        example = t.promptExampleTime;
-    } else {
-        formatting = t.promptFormatPlain;
-    }
-
-    return `${instructions}\n\n${formatting}${example}\n\n${t.promptEnd}`;
-};
-
-const transcribeFileWithGemini = async (
-    file: File, 
-    prompt: string, 
-    onProgress: (percentage: number) => void
-): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
-    onProgress(25);
-    const mediaPart = await fileToGenerativePart(file);
-    onProgress(50);
-
-    const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
-        contents: [prompt, mediaPart]
-    });
-
-    return response.text || "";
-};
-
-// --- Main App Component ---
-
-const TranscriptionViewer = ({ text }: { text: string }) => {
-    const lines = text.split('\n');
-    return (
-        <div className="w-full h-full bg-white dark:bg-slate-800 rounded-lg p-4 pb-12 overflow-y-auto text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-            {lines.map((line, index) => {
-                // Regex matches: Optional timestamp [00:00] + Optional Speaker Label + Content
-                // Groups: 1=Timestamp, 2=SpeakerLabel, 3=Content
-                const regex = /^(\[\d{1,2}:\d{2}(?::\d{2})?\])?\s*(Hablante [A-Z0-9 ]+:|Speaker [A-Z0-9 ]+:)?\s*(.*)$/i;
-                const match = line.match(regex);
-
-                if (match) {
-                    const timestamp = match[1];
-                    const speakerLabel = match[2];
-                    const content = match[3];
-
-                    // If it's just an empty line or failed match that results in empty content (unlikely with .*), render simple line
-                    if (!timestamp && !speakerLabel && !content) {
-                         return <p key={index} className="mb-1">{line || '\u00A0'}</p>;
-                    }
-
-                    return (
-                        <p key={index} className="mb-2">
-                            {timestamp && <span className="text-slate-500 dark:text-slate-500 mr-2 select-none">{timestamp}</span>}
-                            {speakerLabel && <span className="font-bold text-teal-600 dark:text-teal-400 mr-1">{speakerLabel}</span>}
-                            <span>{content}</span>
-                        </p>
-                    );
-                }
-                return <p key={index} className="mb-1">{line || '\u00A0'}</p>;
-            })}
-        </div>
-    );
-};
+// Services & Constants
+import { translations } from './constants/translations';
+import { constructTranscriptionPrompt, transcribeFileWithGemini } from './services/geminiService';
+import { fetchSampleFile, generateDocxBlob } from './services/fileService';
+import { HistoryItem } from './types';
 
 export default function App() {
     const [language, setLanguage] = useState<'es' | 'en'>('es');
@@ -447,14 +124,7 @@ export default function App() {
         setProgressMessage(t.loadingSample);
 
         try {
-            const response = await fetch('https://storage.googleapis.com/generativeai-downloads/data/Apollo-11_Day-01-Highlights-10s.mp3', {
-                mode: 'cors',
-                credentials: 'omit'
-            });
-            if (!response.ok) throw new Error("Network response was not ok");
-            const blob = await response.blob();
-            const sampleFile = new File([blob], "Apollo-11_Day-01-Highlights.mp3", { type: "audio/mpeg" });
-            
+            const sampleFile = await fetchSampleFile();
             setFile(sampleFile);
             setError('');
             setTranscription('');
@@ -562,79 +232,27 @@ export default function App() {
     const handleDownload = async (format: 'txt' | 'md' | 'docx') => {
         if (!transcription) return;
 
-        if (format === 'docx') {
-            // Generate DOCX with formatting
-            const lines = transcription.split('\n');
-            const docChildren = lines.map(line => {
-                const regex = /^(\[\d{1,2}:\d{2}(?::\d{2})?\])?\s*(Hablante [A-Z0-9 ]+:|Speaker [A-Z0-9 ]+:)?\s*(.*)$/i;
-                const match = line.match(regex);
+        try {
+            let blob: Blob;
+            let extension = format;
 
-                if (match) {
-                    const timestamp = match[1];
-                    const speakerLabel = match[2];
-                    const content = match[3];
-
-                    const runs = [];
-                    if (timestamp) {
-                        runs.push(new TextRun({ text: timestamp + " ", color: "64748B" })); // Slate-500
-                    }
-                    if (speakerLabel) {
-                        runs.push(new TextRun({ text: speakerLabel + " ", bold: true, color: "2DD4BF" })); // Teal-400 (Approx)
-                    }
-                    if (content) {
-                         runs.push(new TextRun({ text: content }));
-                    }
-                     // Fallback if regex matches but empty groups (newlines)
-                    if (runs.length === 0) {
-                         runs.push(new TextRun({ text: line }));
-                    }
-
-                    return new Paragraph({
-                        children: runs,
-                        spacing: { after: 200 }
-                    });
-                } else {
-                     // Plain paragraph for lines not matching the pattern
-                    return new Paragraph({
-                        children: [new TextRun(line)],
-                        spacing: { after: 200 }
-                    });
-                }
-            });
-
-            const doc = new Document({
-                sections: [{
-                    properties: {},
-                    children: docChildren,
-                }],
-            });
-
-            try {
-                const blob = await Packer.toBlob(doc);
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `transcription.docx`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            } catch (e) {
-                console.error("Error generating docx", e);
-                setError(t.errorGeneric);
+            if (format === 'docx') {
+                blob = await generateDocxBlob(transcription);
+            } else {
+                blob = new Blob([transcription], { type: format === 'txt' ? 'text/plain' : 'text/markdown' });
             }
 
-        } else {
-            // Existing Text/MD logic
-            const blob = new Blob([transcription], { type: format === 'txt' ? 'text/plain' : 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `transcription.${format}`;
+            a.download = `transcription.${extension}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Error generating file", e);
+            setError(t.errorGeneric);
         }
         setShowDownloadOptions(false);
     };
@@ -654,19 +272,6 @@ export default function App() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [showHistory]);
-
-    // Custom Checkbox Component for consistent styling
-    const ToggleOption = ({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) => (
-        <div 
-            onClick={() => onChange(!checked)} 
-            className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-700 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-600 hover:border-teal-500/50"
-        >
-            <span className="text-sm text-slate-700 dark:text-slate-200">{label}</span>
-            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${checked ? 'bg-teal-600 dark:bg-teal-500 border-teal-600 dark:border-teal-500' : 'bg-transparent border-slate-400'}`}>
-                {checked && <CheckIcon className="w-3.5 h-3.5 text-white" />}
-            </div>
-        </div>
-    );
 
     return (
         <div className="min-h-screen flex flex-col items-center p-4 sm:p-6 md:p-8 relative transition-colors duration-300 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white overflow-x-hidden">
@@ -699,55 +304,15 @@ export default function App() {
                 </button>
             </div>
 
-            {/* History Drawer */}
-            <div 
-                ref={historyRef}
-                className={`fixed top-0 right-0 h-full w-80 bg-white dark:bg-slate-800 shadow-2xl transform transition-transform duration-300 z-40 flex flex-col border-l border-slate-200 dark:border-slate-700 ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}
-            >
-                <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
-                    <h2 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                        <HistoryIcon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                        {t.historyTitle}
-                    </h2>
-                    <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <div className="flex-grow overflow-y-auto p-4 space-y-3">
-                    {history.length === 0 ? (
-                        <p className="text-center text-slate-400 dark:text-slate-500 mt-8 italic">{t.historyEmpty}</p>
-                    ) : (
-                        history.map(item => (
-                            <div key={item.id} className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-teal-400 dark:hover:border-teal-500 transition-colors group cursor-pointer" onClick={() => loadFromHistory(item)}>
-                                <div className="flex justify-between items-start mb-1">
-                                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate max-w-[180px]">{item.fileName}</span>
-                                    <button 
-                                        onClick={(e) => removeFromHistory(item.id, e)} 
-                                        className="text-slate-300 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors"
-                                        title="Delete"
-                                    >
-                                        <TrashIcon className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">{item.date}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 font-mono">{item.preview}</p>
-                            </div>
-                        ))
-                    )}
-                </div>
-                {history.length > 0 && (
-                    <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-                        <button onClick={clearHistory} className="w-full py-2 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                            {t.historyClear}
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            {/* Overlay for drawer */}
-            {showHistory && (
-                <div className="fixed inset-0 bg-black/20 dark:bg-black/50 backdrop-blur-sm z-30 transition-opacity" onClick={() => setShowHistory(false)}></div>
-            )}
+            <HistoryDrawer 
+                showHistory={showHistory}
+                onClose={() => setShowHistory(false)}
+                history={history}
+                onLoad={loadFromHistory}
+                onRemove={removeFromHistory}
+                onClear={clearHistory}
+                t={t}
+            />
 
             <div className="w-full max-w-4xl mx-auto z-10">
                 <header className="text-center mb-8">
