@@ -1,6 +1,8 @@
 # Meeting Transcriber AI
 
-A web application that allows you to upload meeting audio or video files and generate full transcriptions using Google Gemini AI.
+Meeting Transcriber AI is a modern web application designed to generate high-quality transcriptions from audio or video files using Google Gemini AI. It provides speaker diarization, timestamps, export to TXT/Markdown/DOCX, local history, light/dark mode, and multi-language support (English/Spanish).
+
+Built with simplicity in mind, it offers multiple installation methods including Docker, Docker Compose, and local development. Perfect for meeting summaries, interviews, podcasts, research, and productivity workflows.
 
 ## Features
 
