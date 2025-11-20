@@ -2,56 +2,56 @@
 
 set -e
 
-echo "📦 Meeting Transcriber AI - Publicación"
+echo "Meeting Transcriber AI - Release"
 echo "======================================"
 
-# Limpiar
-echo "🧹 Limpiando..."
+# Clean
+echo "Cleaning..."
 npm run clean
 
-# Instalar
-echo "📥 Instalando dependencias..."
+# Install
+echo "Installing dependencies..."
 npm install
 
 # Build
-echo "🔨 Compilando..."
+echo "Building..."
 npm run build
 
-# Versión
+# Version
 VERSION=$(grep '"version"' package.json | sed 's/.*"version": "\(.*\)".*/\1/')
 
 if [ -z "$VERSION" ]; then
-  echo "❌ No se encontró versión en package.json"
+  echo "No version found in package.json"
   exit 1
 fi
 
-echo "🔖 Versión: $VERSION"
+echo "Current version: $VERSION"
 
-# Preguntar versión nueva
-read -p "¿Nueva versión (actual: $VERSION)? Ej: 1.0.0 (Presiona Enter para saltar): " NEW_VERSION
+# Ask for new version
+read -p "New version (current: $VERSION)? e.g. 1.0.0 (Press Enter to skip): " NEW_VERSION
 
 if [ ! -z "$NEW_VERSION" ]; then
-  echo "📝 Actualizando versión a $NEW_VERSION..."
+  echo "Updating version to $NEW_VERSION..."
   npm version $NEW_VERSION --no-git-tag-version
   VERSION=$NEW_VERSION
 fi
 
 # Git
-echo "📤 Subiendo cambios a GitHub..."
+echo "Pushing changes to GitHub..."
 git add -A
-git commit -m "chore: release v$VERSION" || echo "ℹ️ No hay cambios para commit"
+git commit -m "chore: release v$VERSION" || echo "ℹNo changes to commit"
 git push origin main
 
-# Tag y release
-echo "🏷️ Creando tag v$VERSION..."
-git tag -a "v$VERSION" -m "Release version $VERSION" || echo "ℹ️ Tag ya existe"
+# Tag and release
+echo "Creating tag v$VERSION..."
+git tag -a "v$VERSION" -m "Release version $VERSION" || echo "ℹTag already exists"
 git push origin main --tags
 
 echo ""
-echo "✅ ¡Listo!"
+echo "Done!"
 echo ""
-echo "📋 Próximos pasos:"
-echo "   1. GitHub Actions publicará automáticamente el Docker"
-echo "   2. Ve a: https://github.com/mpelaez/meeting-transcriber/releases"
-echo "   3. Edita la release si es necesario"
+echo "Next steps:"
+echo "   1. GitHub Actions will automatically publish the Docker image"
+echo "   2. Go to: https://github.com/mpelaez/meeting-transcriber/releases"
+echo "   3. Edit the release if necessary"
 echo ""

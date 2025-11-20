@@ -1,4 +1,4 @@
-name: Release and Publish Docker
+name: Release and Publish
 
 on:
   push:
@@ -10,7 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  build:
+  # 1. CI Check: Ensure code builds before doing anything else
+  ci-check:
+    name: CI Build Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,68 +26,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build Project
         run: npm run build
 
-      - name: Check build output
+      - name: Verify build output
         run: |
           if [ ! -d "dist" ]; then
             echo "Build failed: dist folder not found"
             exit 1
           fi
-          echo "Build successful!"
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body: |
-            ## Nueva versión de Meeting Transcriber AI
-            
-            ### Docker Compose (Recomendado)
-            ```bash
-            # 1. Clonar el repositorio
-            git clone https://github.com/${{ github.repository }}.git
-            cd meeting-transcribe
-            
-            # 2. Configurar tu API key
-            cp .env.example .env
-            nano .env  # Editar con tu GEMINI_API_KEY
-            
-            # 3. Ejecutar
-            docker-compose up
-            ```
-            
-            ### Docker directo
-            ```bash
-            docker run -p 3000:3000 \
-              -e GEMINI_API_KEY=tu_api_key \
-              ghcr.io/${{ github.repository }}:${{ github.ref_name }}
-            ```
-            
-            ### ⚙️ Instalación local
-            ```bash
-            npm install
-            cp .env.example .env.local
-            nano .env.local  # Editar con tu GEMINI_API_KEY
-            npm run dev
-            ```
-            
-            ### Cambios en esta versión
-            - Imagen Docker pública en GitHub Container Registry
-            - Soporte para API key personalizada
-            - Docker Compose para fácil despliegue
-          draft: false
-          prerelease: false
-
+  # 2. Publish Docker: Build and push the image to Registry
   publish-docker:
-    needs: build
+    name: Publish Docker Image
+    needs: ci-check
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v4
 
@@ -120,11 +77,34 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  make-docker-public:
+  # 3. Create Release: Now that image exists, create the GitHub Release
+  create-release:
+    name: Create GitHub Release
     needs: publish-docker
     runs-on: ubuntu-latest
     steps:
-      - name: Make Docker image public
+      - uses: actions/checkout@v4
+
+      - name: Prepare Release Body
+        id: prepare_body
+        shell: bash
         run: |
-          echo "Imagen Docker publicada en: ghcr.io/${{ github.repository }}"
-          echo "La imagen está disponible públicamente"
+          # Read the template file
+          BODY_CONTENT=$(cat .github/release_notes.md)
+          
+          # Replace placeholders with actual variables
+          # We use | as delimiter to avoid issues with slashes in repo names
+          BODY_CONTENT="${BODY_CONTENT//\{\{REPO\}\}/${{ github.repository }}}"
+          BODY_CONTENT="${BODY_CONTENT//\{\{VERSION\}\}/${{ github.ref_name }}}"
+          
+          # Save to a temporary file to use in the release step
+          echo "$BODY_CONTENT" > release_body.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: release_body.md
+          # This automatically appends the list of commits/changes to the body
+          generate_release_notes: true
+          draft: false
+          prerelease: false
