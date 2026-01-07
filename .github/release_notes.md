@@ -1,11 +1,8 @@
 ## New Version of Meeting Transcriber AI
 
 ### What's New in This Version
-- Added support for **DOCX downloads**.
-- Added **light/dark mode** toggle.
-- Added **multilanguage support** (English and Spanish).
-- Included a **sample audio file** for testing transcription.
-- Added **transcription history**, storing the last 10 transcriptions in Local Storage.
+- Added support for **MKV files**.
+- 
 
 ---
 

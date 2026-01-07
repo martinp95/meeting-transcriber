@@ -12,6 +12,9 @@ import { constructTranscriptionPrompt, transcribeFileWithGemini } from './servic
 import { fetchSampleFile, generateDocxBlob } from './services/fileService';
 import { HistoryItem } from './types';
 
+declare const document: any;
+declare const navigator: any;
+
 export default function App() {
     const [language, setLanguage] = useState<'es' | 'en'>('es');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -105,7 +108,8 @@ export default function App() {
     const handleFileChange = (files: FileList | null) => {
         if (files && files[0]) {
             const selectedFile = files[0];
-            if (selectedFile.type.startsWith('audio/') || selectedFile.type.startsWith('video/')) {
+            const isMkv = selectedFile.name.toLowerCase().endsWith('.mkv');
+            if (selectedFile.type.startsWith('audio/') || selectedFile.type.startsWith('video/') || isMkv) {
                 setFile(selectedFile);
                 setError('');
                 setTranscription('');
@@ -158,7 +162,7 @@ export default function App() {
         e.preventDefault();
         e.stopPropagation();
         setIsDragging(false);
-        handleFileChange(e.dataTransfer.files);
+        handleFileChange((e.dataTransfer as any).files);
     };
 
     const handleRemoveFile = () => {
@@ -168,7 +172,7 @@ export default function App() {
         setProgress(0);
         setProgressMessage('');
         if (fileInputRef.current) {
-            fileInputRef.current.value = "";
+            (fileInputRef.current as any).value = "";
         }
     };
 
@@ -216,12 +220,12 @@ export default function App() {
 
     const handleCopy = () => {
         if (transcription) {
-            navigator.clipboard.writeText(transcription)
+            (navigator as any).clipboard.writeText(transcription)
                 .then(() => {
                     setCopySuccess(t.copySuccess);
                     setTimeout(() => setCopySuccess(''), 2000);
                 })
-                .catch(err => {
+                .catch((err: any) => {
                     console.error('Failed to copy: ', err);
                     setCopySuccess(t.copyError);
                     setTimeout(() => setCopySuccess(''), 2000);
@@ -259,10 +263,10 @@ export default function App() {
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
-            if (downloadRef.current && !downloadRef.current.contains(event.target as Node)) {
+            if (downloadRef.current && !(downloadRef.current as any).contains(event.target as any)) {
                 setShowDownloadOptions(false);
             }
-            if (historyRef.current && !historyRef.current.contains(event.target as Node) && showHistory) {
+            if (historyRef.current && !(historyRef.current as any).contains(event.target as any) && showHistory) {
                 setShowHistory(false);
             }
         };
@@ -331,7 +335,7 @@ export default function App() {
                                     onDragLeave={handleDragLeave}
                                     onDragOver={handleDragOver}
                                     onDrop={handleDrop}
-                                    onClick={() => fileInputRef.current?.click()}
+                                    onClick={() => (fileInputRef.current as any)?.click()}
                                     className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors duration-300 ${isDragging ? 'border-teal-500 bg-teal-50 dark:bg-slate-700/50' : 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500 bg-slate-50 dark:bg-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}
                                 >
                                     <div className="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center">
@@ -352,12 +356,12 @@ export default function App() {
                                             </button>
                                         </div>
                                     </div>
-                                    <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*" onChange={(e) => handleFileChange(e.target.files)} />
+                                    <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*,.mkv" onChange={(e) => handleFileChange((e.target as any).files)} />
                                 </div>
                             ) : (
                                 <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-between border border-slate-200 dark:border-slate-600">
                                     <div className="flex items-center space-x-3 overflow-hidden">
-                                        {file.type.startsWith('video/') ? (
+                                        {file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv') ? (
                                             <FileVideoIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
                                         ) : (
                                             <FileAudioIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />

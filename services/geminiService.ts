@@ -7,8 +7,15 @@ const fileToGenerativePart = async (file: File) => {
         reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
         reader.readAsDataURL(file);
     });
+
+    let mimeType = file.type;
+    // Handle MKV files where browser might not detect mime type
+    if (!mimeType && file.name.toLowerCase().endsWith('.mkv')) {
+        mimeType = 'video/x-matroska';
+    }
+
     return {
-        inlineData: { data: await base64EncodedDataPromise, mimeType: file.type },
+        inlineData: { data: await base64EncodedDataPromise, mimeType: mimeType || file.type },
     };
 };
 
@@ -60,7 +67,12 @@ export const transcribeFileWithGemini = async (
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-pro",
-        contents: [prompt, mediaPart]
+        contents: {
+            parts: [
+                mediaPart,
+                { text: prompt }
+            ]
+        }
     });
 
     return response.text || "";
