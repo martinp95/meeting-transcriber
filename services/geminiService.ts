@@ -1,5 +1,6 @@
+
 import { GoogleGenAI } from "@google/genai";
-import { TranscriptionOptions } from '../types';
+import { TranscriptionOptions, ModelType } from '../types';
 
 const fileToGenerativePart = async (file: File) => {
     const base64EncodedDataPromise = new Promise<string>((resolve) => {
@@ -57,16 +58,20 @@ export const constructTranscriptionPrompt = (t: any, options: TranscriptionOptio
 export const transcribeFileWithGemini = async (
     file: File, 
     prompt: string, 
-    onProgress: (percentage: number) => void
+    onProgress: (percentage: number) => void,
+    modelType: ModelType
 ): Promise<string> => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     onProgress(25);
     const mediaPart = await fileToGenerativePart(file);
     onProgress(50);
+    
+    // FIX: Use recommended model 'gemini-3-flash-preview' instead of 'gemini-flash-latest'.
+    const modelName = modelType === 'pro' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
 
     const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
+        model: modelName,
         contents: {
             parts: [
                 mediaPart,

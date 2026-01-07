@@ -13,3 +13,4 @@ export interface TranscriptionOptions {
 
 export type Language = 'es' | 'en';
 export type Theme = 'dark' | 'light';
+export type ModelType = 'pro' | 'flash';

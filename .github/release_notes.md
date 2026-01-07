@@ -2,7 +2,8 @@
 
 ### What's New in This Version
 - Added support for **MKV files**.
-- 
+- Added search andd sort in history
+- Choose between model **Pro or Flash**
 
 ---
 

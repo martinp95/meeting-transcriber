@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'react';
 
 // Components
@@ -10,13 +11,13 @@ import HistoryDrawer from './components/HistoryDrawer';
 import { translations } from './constants/translations';
 import { constructTranscriptionPrompt, transcribeFileWithGemini } from './services/geminiService';
 import { fetchSampleFile, generateDocxBlob } from './services/fileService';
-import { HistoryItem } from './types';
+import { HistoryItem, ModelType } from './types';
 
 declare const document: any;
 declare const navigator: any;
 
 export default function App() {
-    const [language, setLanguage] = useState<'es' | 'en'>('es');
+    const [language, setLanguage] = useState<'es' | 'en'>('en');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const t = translations[language];
 
@@ -33,6 +34,7 @@ export default function App() {
     // Configuration Options
     const [includeDiarization, setIncludeDiarization] = useState(false);
     const [includeTimestamps, setIncludeTimestamps] = useState(false);
+    const [model, setModel] = useState<ModelType>('pro');
 
     // History State
     const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -199,7 +201,7 @@ export default function App() {
             const text = await transcribeFileWithGemini(file, prompt, (percentage) => {
                 setProgress(percentage);
                 if (percentage === 50) setProgressMessage(t.progressAnalyzing);
-            });
+            }, model);
 
             if (text) {
                 setTranscription(text);
@@ -216,7 +218,7 @@ export default function App() {
         } finally {
             setIsLoading(false);
         }
-    }, [file, includeDiarization, includeTimestamps, t, history]);
+    }, [file, includeDiarization, includeTimestamps, t, history, model]);
 
     const handleCopy = () => {
         if (transcription) {
@@ -375,18 +377,33 @@ export default function App() {
                             )}
 
                             {file && !isLoading && (
-                                <div className="grid grid-cols-2 gap-3">
-                                    <ToggleOption 
-                                        label={t.optDiarization}
-                                        checked={includeDiarization} 
-                                        onChange={setIncludeDiarization} 
-                                    />
-                                    <ToggleOption 
-                                        label={t.optTimestamps}
-                                        checked={includeTimestamps} 
-                                        onChange={setIncludeTimestamps} 
-                                    />
-                                </div>
+                                <>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <ToggleOption 
+                                            label={t.optDiarization}
+                                            checked={includeDiarization} 
+                                            onChange={setIncludeDiarization} 
+                                        />
+                                        <ToggleOption 
+                                            label={t.optTimestamps}
+                                            checked={includeTimestamps} 
+                                            onChange={setIncludeTimestamps} 
+                                        />
+                                    </div>
+                                     <div>
+                                        <label htmlFor="model-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 px-1">{t.optModel}</label>
+                                        <select 
+                                            id="model-select"
+                                            value={model} 
+                                            // FIX: Use e.currentTarget.value to correctly access the value from the event.
+                                            onChange={(e) => setModel(e.currentTarget.value as ModelType)}
+                                            className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                                        >
+                                            <option value="pro">{t.modelPro}</option>
+                                            <option value="flash">{t.modelFlash}</option>
+                                        </select>
+                                    </div>
+                                </>
                             )}
 
                             {error && <p className="text-sm text-red-500 dark:text-red-400 text-center">{error}</p>}
