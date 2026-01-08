@@ -1,6 +1,26 @@
 import React from 'react';
 
-const TranscriptionViewer = ({ text }: { text: string }) => {
+interface TranscriptionViewerProps {
+    text: string;
+    onSeek?: (seconds: number) => void;
+}
+
+const parseTimestampToSeconds = (timestamp: string): number => {
+    try {
+        const clean = timestamp.replace(/[\[\]]/g, '');
+        const parts = clean.split(':').map(p => parseInt(p, 10));
+        if (parts.length === 3) {
+            return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else if (parts.length === 2) {
+            return parts[0] * 60 + parts[1];
+        }
+    } catch (e) {
+        return 0;
+    }
+    return 0;
+};
+
+const TranscriptionViewer = ({ text, onSeek }: TranscriptionViewerProps) => {
     const lines = text.split('\n');
     return (
         <div className="w-full h-full bg-white dark:bg-slate-800 rounded-lg p-4 pb-12 overflow-y-auto text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono text-sm leading-relaxed">
@@ -22,7 +42,19 @@ const TranscriptionViewer = ({ text }: { text: string }) => {
 
                     return (
                         <p key={index} className="mb-2">
-                            {timestamp && <span className="text-slate-500 dark:text-slate-500 mr-2 select-none">{timestamp}</span>}
+                            {timestamp && (
+                                <span 
+                                    onClick={() => {
+                                        if (onSeek) {
+                                            onSeek(parseTimestampToSeconds(timestamp));
+                                        }
+                                    }}
+                                    title={onSeek ? "Seek to this time" : undefined}
+                                    className={`text-slate-500 dark:text-slate-500 mr-2 select-none ${onSeek ? 'cursor-pointer hover:text-teal-600 dark:hover:text-teal-400 hover:underline' : ''}`}
+                                >
+                                    {timestamp}
+                                </span>
+                            )}
                             {speakerLabel && <span className="font-bold text-teal-600 dark:text-teal-400 mr-1">{speakerLabel}</span>}
                             <span>{content}</span>
                         </p>

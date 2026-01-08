@@ -16,7 +16,7 @@ declare const document: any;
 declare const navigator: any;
 
 export default function App() {
-    const [language, setLanguage] = useState<'es' | 'en'>('en');
+    const [language, setLanguage] = useState<'es' | 'en'>('es');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const t = translations[language];
 
@@ -43,6 +43,7 @@ export default function App() {
     const downloadRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const historyRef = useRef<HTMLDivElement>(null);
+    const mediaRef = useRef<any>(null);
 
     // Load history from localStorage
     useEffect(() => {
@@ -274,6 +275,13 @@ export default function App() {
         }
         setShowDownloadOptions(false);
     };
+
+    const handleSeek = (seconds: number) => {
+        if (mediaRef.current) {
+            mediaRef.current.currentTime = seconds;
+            mediaRef.current.play().catch((e: any) => console.warn("Playback failed", e));
+        }
+    };
     
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -378,10 +386,10 @@ export default function App() {
                                     {mediaUrl && (
                                         <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-900 shadow-md">
                                             {file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv') ? (
-                                                <video src={mediaUrl} controls className="w-full max-h-[240px] mx-auto" />
+                                                <video ref={mediaRef} src={mediaUrl} controls className="w-full max-h-[240px] mx-auto" />
                                             ) : (
                                                 <div className="p-4 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                                                    <audio src={mediaUrl} controls className="w-full" />
+                                                    <audio ref={mediaRef} src={mediaUrl} controls className="w-full" />
                                                 </div>
                                             )}
                                         </div>
@@ -422,7 +430,7 @@ export default function App() {
                                         <select 
                                             id="model-select"
                                             value={model} 
-                                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setModel(e.target.value as ModelType)}
+                                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setModel((e.target as any).value as ModelType)}
                                             className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
                                         >
                                             <option value="pro">{t.modelPro}</option>
@@ -478,7 +486,7 @@ export default function App() {
                                             )}
                                         </div>
                                     </div>
-                                    <TranscriptionViewer text={transcription} />
+                                    <TranscriptionViewer text={transcription} onSeek={handleSeek} />
                                     <div className="absolute bottom-3 right-6 pointer-events-none z-10">
                                         <span className="bg-slate-100/80 dark:bg-slate-700/80 backdrop-blur-md text-slate-500 dark:text-slate-400 text-xs px-2 py-1 rounded border border-slate-200 dark:border-slate-600 font-mono shadow-sm">
                                             {transcription.length.toLocaleString()} {t.charCount}

@@ -16,6 +16,7 @@ Built with simplicity in mind, it offers multiple installation methods including
   - Native browser video player for video files (MP4, MOV, MKV)
   - Clean audio player for audio files (MP3, WAV)
   - Local playback without external server uploads
+  - **Interactive timestamps**: Click any timestamp in the transcription to seek to that point in the player
 - **Light and dark mode** with theme persistence
 - **Multi-language interface**: English and Spanish support
 - **Sample audio file** (Apollo 11) included for testing

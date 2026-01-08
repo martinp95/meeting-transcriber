@@ -8,6 +8,7 @@
   - Native video player for MP4, MOV, MKV files
   - Clean audio player for MP3, WAV files
   - Local playback without server uploads
+  - **Interactive timestamps** - Click on any timestamp in the transcription to seek to that point in the player
 - **Transcription history improvements** with search and sort functionality
 - **AI Model selection** - Choose between Gemini Pro (high quality) or Gemini Flash (faster processing)
 - **Improved UI/UX** for better user experience across all platforms
