@@ -7,7 +7,7 @@ import ToggleOption from './components/ToggleOption';
 import HistoryDrawer from './components/HistoryDrawer';
 
 // Services & Constants
-import { translations } from './constants/translations';
+import { loadTranslations, getTranslations } from './services/translationService';
 import { constructTranscriptionPrompt, transcribeFileWithGemini } from './services/geminiService';
 import { fetchSampleFile, generateDocxBlob } from './services/fileService';
 import { HistoryItem, ModelType } from './types';
@@ -16,9 +16,11 @@ declare const document: any;
 declare const navigator: any;
 
 export default function App() {
-    const [language, setLanguage] = useState<'es' | 'en'>('es');
+    const [language, setLanguage] = useState<'es' | 'en'>('en');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-    const t = translations[language];
+    const [translationsLoaded, setTranslationsLoaded] = useState(false);
+    
+    const t = getTranslations(language);
 
     const [file, setFile] = useState<File | null>(null);
     const [mediaUrl, setMediaUrl] = useState<string | null>(null);
@@ -44,6 +46,11 @@ export default function App() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const historyRef = useRef<HTMLDivElement>(null);
     const mediaRef = useRef<any>(null);
+
+    // Load translations on mount
+    useEffect(() => {
+        loadTranslations().then(() => setTranslationsLoaded(true));
+    }, []);
 
     // Load history from localStorage
     useEffect(() => {

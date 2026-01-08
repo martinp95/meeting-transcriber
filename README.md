@@ -96,6 +96,12 @@ npm run preview  # Preview the production build
 npm run clean    # Remove node_modules, dist, and cache
 ```
 
+## Internationalization (i18n)
+
+Meeting Transcriber AI supports multiple languages. Currently available: **English** and **Spanish**.
+
+To add new language support or customize existing translations, see the [INTERNATIONALIZATION.md](INTERNATIONALIZATION.md) guide.
+
 ## Docker Details
 
 ### Environment Variables
