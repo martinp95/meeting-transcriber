@@ -1,5 +1,4 @@
-
-import React, { useState, useCallback, DragEvent, useRef, useEffect } from 'react';
+import React, { useState, useCallback, DragEvent, useRef, useEffect, ChangeEvent } from 'react';
 
 // Components
 import { UploadIcon, FileAudioIcon, FileVideoIcon, TrashIcon, CopyIcon, DownloadIcon, GlobeIcon, SunIcon, MoonIcon, HistoryIcon, LoadingSpinner } from './components/Icons';
@@ -22,6 +21,7 @@ export default function App() {
     const t = translations[language];
 
     const [file, setFile] = useState<File | null>(null);
+    const [mediaUrl, setMediaUrl] = useState<string | null>(null);
     const [isDragging, setIsDragging] = useState(false);
     const [transcription, setTranscription] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +63,18 @@ export default function App() {
             document.documentElement.classList.remove('dark');
         }
     }, [theme]);
+
+    useEffect(() => {
+        if (file) {
+            const url = URL.createObjectURL(file);
+            setMediaUrl(url);
+            return () => {
+                URL.revokeObjectURL(url);
+            };
+        } else {
+            setMediaUrl(null);
+        }
+    }, [file]);
 
     const toggleLanguage = () => {
         setLanguage(prev => prev === 'es' ? 'en' : 'es');
@@ -361,18 +373,33 @@ export default function App() {
                                     <input ref={fileInputRef} id="dropzone-file" type="file" className="hidden" accept="audio/*,video/*,.mkv" onChange={(e) => handleFileChange((e.target as any).files)} />
                                 </div>
                             ) : (
-                                <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-between border border-slate-200 dark:border-slate-600">
-                                    <div className="flex items-center space-x-3 overflow-hidden">
-                                        {file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv') ? (
-                                            <FileVideoIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
-                                        ) : (
-                                            <FileAudioIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
-                                        )}
-                                        <span className="text-sm font-medium truncate text-slate-700 dark:text-slate-200">{file.name}</span>
+                                <div className="space-y-4">
+                                     {/* Media Player */}
+                                    {mediaUrl && (
+                                        <div className="w-full rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-900 shadow-md">
+                                            {file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv') ? (
+                                                <video src={mediaUrl} controls className="w-full max-h-[240px] mx-auto" />
+                                            ) : (
+                                                <div className="p-4 flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                                                    <audio src={mediaUrl} controls className="w-full" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-between border border-slate-200 dark:border-slate-600">
+                                        <div className="flex items-center space-x-3 overflow-hidden">
+                                            {file.type.startsWith('video/') || file.name.toLowerCase().endsWith('.mkv') ? (
+                                                <FileVideoIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                                            ) : (
+                                                <FileAudioIcon className="w-8 h-8 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                                            )}
+                                            <span className="text-sm font-medium truncate text-slate-700 dark:text-slate-200">{file.name}</span>
+                                        </div>
+                                        <button onClick={handleRemoveFile} title={t.removeFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-white transition-colors flex-shrink-0">
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
                                     </div>
-                                    <button onClick={handleRemoveFile} title={t.removeFile} className="p-2 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600 hover:text-slate-700 dark:hover:text-white transition-colors flex-shrink-0">
-                                        <TrashIcon className="w-5 h-5" />
-                                    </button>
                                 </div>
                             )}
 
@@ -395,8 +422,7 @@ export default function App() {
                                         <select 
                                             id="model-select"
                                             value={model} 
-                                            // FIX: Use e.currentTarget.value to correctly access the value from the event.
-                                            onChange={(e) => setModel(e.currentTarget.value as ModelType)}
+                                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setModel(e.target.value as ModelType)}
                                             className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
                                         >
                                             <option value="pro">{t.modelPro}</option>

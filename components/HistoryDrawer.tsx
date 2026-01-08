@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, ChangeEvent } from 'react';
 import { HistoryIcon, TrashIcon, SearchIcon } from './Icons';
 import { HistoryItem } from '../types';
 
@@ -74,16 +74,14 @@ const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
                                 type="text" 
                                 placeholder={t.historySearchPlaceholder}
                                 value={searchTerm}
-                                // FIX: Use e.currentTarget.value to correctly access the value from the event.
-                                onChange={(e) => setSearchTerm(e.currentTarget.value)}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 placeholder-slate-400"
                             />
                         </div>
                         
                         <select 
                             value={sortOption} 
-                            // FIX: Use e.currentTarget.value to correctly access the value from the event.
-                            onChange={(e) => setSortOption(e.currentTarget.value as any)}
+                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setSortOption(e.target.value as any)}
                             className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
                         >
                             <option value="newest">{t.historySortNewest}</option>

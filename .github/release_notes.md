@@ -1,9 +1,16 @@
 ## New Version of Meeting Transcriber AI
 
 ### What's New in This Version
-- Added support for **MKV files**.
-- Added search andd sort in history
-- Choose between model **Pro or Flash**
+
+#### Features Added
+- **MKV file support** for video transcriptions
+- **Built-in media player** for audio and video preview
+  - Native video player for MP4, MOV, MKV files
+  - Clean audio player for MP3, WAV files
+  - Local playback without server uploads
+- **Transcription history improvements** with search and sort functionality
+- **AI Model selection** - Choose between Gemini Pro (high quality) or Gemini Flash (faster processing)
+- **Improved UI/UX** for better user experience across all platforms
 
 ---
 

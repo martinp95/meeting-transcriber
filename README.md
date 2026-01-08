@@ -6,14 +6,20 @@ Built with simplicity in mind, it offers multiple installation methods including
 
 ## Features
 
-- Transcription of audio and video using Gemini AI
-- Automatic speaker identification (diarization)
-- Optional timestamps
-- Export to TXT, Markdown, and DOCX
-- Transcription history (stores last 10 locally)
-- Light and dark mode
-- Multilanguage interface (English and Spanish)
-- Includes example audio file for testing
+- **Transcription of audio and video** using Gemini AI
+- **Automatic speaker identification** (diarization)
+- **Optional timestamps** for precise referencing
+- **Export formats**: TXT, Markdown, and DOCX
+- **Transcription history** with search and sort functionality (stores last 10 locally)
+- **AI Model selection**: Choose between Gemini Pro (high quality) or Gemini Flash (faster)
+- **Built-in media player**: Preview audio and video files before transcription
+  - Native browser video player for video files (MP4, MOV, MKV)
+  - Clean audio player for audio files (MP3, WAV)
+  - Local playback without external server uploads
+- **Light and dark mode** with theme persistence
+- **Multi-language interface**: English and Spanish support
+- **Sample audio file** (Apollo 11) included for testing
+- **MKV file support** for video transcriptions
 
 ## Quick Start
 
@@ -64,7 +70,7 @@ npm run dev
 
 ## Requirements
 
-- Node.js 18+ (for local development)
+- Node.js 20+ (for local development)
 - Docker & Docker Compose (for containerized execution)
 - Google Gemini API Key (https://ai.google.dev/)
 
