@@ -1,5 +1,11 @@
 # Meeting Transcriber AI
 
+[![Node.js](https://img.shields.io/badge/node.js-20+-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/typescript-5.0+-blue.svg)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/react-18+-61DAFB.svg?logo=react)](https://react.dev/)
+[![License](https://img.shields.io/github/license/martinp95/meeting-transcriber.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg?logo=docker)](https://www.docker.com/)
+
 Meeting Transcriber AI is a modern web application designed to generate high-quality transcriptions from audio or video files using Google Gemini AI. It provides speaker diarization, timestamps, export to TXT/Markdown/DOCX, local history, light/dark mode, and multi-language support (English/Spanish).
 
 Built with simplicity in mind, it offers multiple installation methods including Docker, Docker Compose, and local development. Perfect for meeting summaries, interviews, podcasts, research, and productivity workflows.
