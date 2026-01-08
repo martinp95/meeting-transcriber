@@ -6,8 +6,8 @@ The following versions of Meeting Transcriber AI are currently supported with se
 
 | Version | Supported         |
 | ------- | ------------------|
-| 1.2     | ✅                |
-| <1.2    | ❌                |
+| 1.1     | ✅                |
+| <1.1    | ❌                |
 
 ## Reporting a Vulnerability
 
