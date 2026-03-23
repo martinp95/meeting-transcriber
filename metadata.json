@@ -1,5 +1,5 @@
 {
   "name": "Meeting Transcriber AI",
-  "description": "An application to upload a meeting's audio file and get a full transcription using the Gemini AI.",
+  "description": "An application to upload a meeting's audio file and get a full transcription in multiple languages using the Gemini AI.",
   "requestFramePermissions": []
 }

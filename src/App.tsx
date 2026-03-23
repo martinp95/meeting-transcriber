@@ -36,6 +36,7 @@ export default function App() {
     // Configuration Options
     const [includeDiarization, setIncludeDiarization] = useState(false);
     const [includeTimestamps, setIncludeTimestamps] = useState(false);
+    const [outputLanguage, setOutputLanguage] = useState<string>('original');
     const [model, setModel] = useState<ModelType>('pro');
 
     // History State
@@ -213,7 +214,8 @@ export default function App() {
         try {
             const prompt = constructTranscriptionPrompt(t, {
                 includeDiarization,
-                includeTimestamps
+                includeTimestamps,
+                outputLanguage
             });
 
             setProgressMessage(t.progressAnalyzing);
@@ -238,7 +240,7 @@ export default function App() {
         } finally {
             setIsLoading(false);
         }
-    }, [file, includeDiarization, includeTimestamps, t, history, model]);
+    }, [file, includeDiarization, includeTimestamps, outputLanguage, t, history, model]);
 
     const handleCopy = () => {
         if (transcription) {
@@ -432,17 +434,37 @@ export default function App() {
                                             onChange={setIncludeTimestamps} 
                                         />
                                     </div>
-                                     <div>
-                                        <label htmlFor="model-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 px-1">{t.optModel}</label>
-                                        <select 
-                                            id="model-select"
-                                            value={model} 
-                                            onChange={(e: ChangeEvent<HTMLSelectElement>) => setModel((e.target as any).value as ModelType)}
-                                            className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
-                                        >
-                                            <option value="pro">{t.modelPro}</option>
-                                            <option value="flash">{t.modelFlash}</option>
-                                        </select>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label htmlFor="lang-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 px-1">{t.optOutputLanguage}</label>
+                                            <select 
+                                                id="lang-select"
+                                                value={outputLanguage} 
+                                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setOutputLanguage(e.target.value)}
+                                                className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                                            >
+                                                <option value="original">{t.langOriginal}</option>
+                                                <option value="Gallego">{t.langGallego}</option>
+                                                <option value="Spanish">{t.langSpanish}</option>
+                                                <option value="English">{t.langEnglish}</option>
+                                                <option value="French">{t.langFrench}</option>
+                                                <option value="German">{t.langGerman}</option>
+                                                <option value="Italian">{t.langItalian}</option>
+                                                <option value="Portuguese">{t.langPortuguese}</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="model-select" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 px-1">{t.optModel}</label>
+                                            <select 
+                                                id="model-select"
+                                                value={model} 
+                                                onChange={(e: ChangeEvent<HTMLSelectElement>) => setModel((e.target as any).value as ModelType)}
+                                                className="w-full p-3 text-sm rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500 cursor-pointer"
+                                            >
+                                                <option value="pro">{t.modelPro}</option>
+                                                <option value="flash">{t.modelFlash}</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </>
                             )}

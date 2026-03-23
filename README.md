@@ -25,8 +25,10 @@ Built with simplicity in mind, it offers multiple installation methods including
   - **Interactive timestamps**: Click any timestamp in the transcription to seek to that point in the player
 - **Light and dark mode** with theme persistence
 - **Multi-language interface**: English and Spanish support
+- **Multi-language transcriptions**: Generate transcriptions in different languages (English, Spanish, and more)
 - **Sample audio file** (Apollo 11) included for testing
 - **MKV file support** for video transcriptions
+- **Translate transcription**: Option to translate the transcription to different languages
 
 ## Quick Start
 
@@ -92,7 +94,6 @@ npm run dev
 ```bash
 npm run dev      # Start development server (port 3000)
 npm run build    # Create production build
-npm run preview  # Preview the production build
 npm run clean    # Remove node_modules, dist, and cache
 ```
 

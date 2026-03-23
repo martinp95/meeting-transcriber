@@ -21,10 +21,17 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const constructTranscriptionPrompt = (t: any, options: TranscriptionOptions) => {
-    const { includeDiarization, includeTimestamps } = options;
+    const { includeDiarization, includeTimestamps, outputLanguage } = options;
     let instructions = t.promptRole;
     let formatting = "";
     let example = "";
+    let translationInstruction = "";
+    let endInstruction = t.promptEndOriginal || t.promptEnd;
+
+    if (outputLanguage !== 'original') {
+        translationInstruction = `\n\n${t.promptOutputLang} ${outputLanguage}.`;
+        endInstruction = t.promptEndTranslated;
+    }
 
     if (includeDiarization) {
         instructions += " " + t.promptDiarization;
@@ -52,7 +59,7 @@ export const constructTranscriptionPrompt = (t: any, options: TranscriptionOptio
         formatting = t.promptFormatPlain;
     }
 
-    return `${instructions}\n\n${formatting}${example}\n\n${t.promptEnd}`;
+    return `${instructions}${translationInstruction}\n\n${formatting}${example}\n\n${endInstruction}`;
 };
 
 export const transcribeFileWithGemini = async (
@@ -67,8 +74,8 @@ export const transcribeFileWithGemini = async (
     const mediaPart = await fileToGenerativePart(file);
     onProgress(50);
     
-    // FIX: Use recommended model 'gemini-3-flash-preview' instead of 'gemini-flash-latest'.
-    const modelName = modelType === 'pro' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
+    // Updated to use 2.5 versions as requested
+    const modelName = modelType === 'pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
 
     const response = await ai.models.generateContent({
         model: modelName,

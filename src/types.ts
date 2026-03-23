@@ -9,6 +9,7 @@ export interface HistoryItem {
 export interface TranscriptionOptions {
     includeDiarization: boolean;
     includeTimestamps: boolean;
+    outputLanguage: string;
 }
 
 export type Language = 'es' | 'en';
