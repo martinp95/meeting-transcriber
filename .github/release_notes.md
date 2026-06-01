@@ -1,10 +1,10 @@
-## New Version of Meeting Transcriber AI
+## New Version of Meeting Transcriber AI (v1.3.0)
 
 ### What's New in This Version
 
-#### Features Added
-- **Multi-language transcriptions** - Generate transcriptions in different languages (English, Spanish, and more)
-- **Translate transcription** - Option to translate the transcription output to different languages
+#### Improvements
+- **Updated Gemini Models** - Now using gemini-3.1-pro-preview and gemini-3.5-flash for better performance and accuracy
+- **Dependency Updates** - Updated Vite, PostCSS, WebSocket and other dependencies for improved stability and security
 
 ---
 

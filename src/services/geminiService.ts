@@ -75,7 +75,7 @@ export const transcribeFileWithGemini = async (
     onProgress(50);
     
     // Updated to use 2.5 versions as requested
-    const modelName = modelType === 'pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+    const modelName = modelType === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-3.5-flash';
 
     const response = await ai.models.generateContent({
         model: modelName,
